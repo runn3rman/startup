@@ -6,7 +6,7 @@ Just adding notes, I know git pretty well. We will see how this goes!
 
 [My startup - Simon](https://simon.cs260.click)
 
-[IP Address of Server]((http://54.205.28.50/))
+[IP Address of Server]((http://54.81.96.130/))
 
 ## Helpful links
 
@@ -18,7 +18,7 @@ Just adding notes, I know git pretty well. We will see how this goes!
 
 My IP address is: 54.81.96.130
 Remote: ssh -i \[mykeyhere].pem ubuntu@54.205.28.50
-Launching my AMI I initially put it on a private subnet. Even though it had a public IP address and the security group was right, I wasn't able to connect to it.
+
 
 ## Caddy
 
