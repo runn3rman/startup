@@ -10,7 +10,7 @@
       <h1>Ink</h1>
     </header>
 
-        <nav>
+    <nav>
       <a href="index.html">Home</a>
       <a href="game.html">Game</a>
       <a href="practice.html">Practice</a>
@@ -21,6 +21,43 @@
 
     <main>
       <h2>Login</h2>
+      <section>
+        <p>Logged in as: <span>Guest</span></p>
+      </section>
+
+      <section>
+        <h3>Login</h3>
+        <form>
+          <label for="login-email">Email</label>
+          <input id="login-email" name="email" type="email" autocomplete="email" />
+
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" />
+
+          <button type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <section>
+        <h3>Register</h3>
+        <form>
+          <label for="register-username">Username</label>
+          <input id="register-username" name="username" type="text" autocomplete="username" />
+
+          <label for="register-email">Email</label>
+          <input id="register-email" name="email" type="email" autocomplete="email" />
+
+          <label for="register-password">Password</label>
+          <input id="register-password" name="password" type="password" autocomplete="new-password" />
+
+          <label for="register-confirm">Confirm password</label>
+          <input id="register-confirm" name="confirmPassword" type="password" autocomplete="new-password" />
+
+          <button type="submit">Create account</button>
+        </form>
+      </section>
+
+      <p>(Service placeholder) This will call /api/auth/login and /api/auth/register</p>
       <p><a href="index.html">Back to Home</a></p>
     </main>
 
