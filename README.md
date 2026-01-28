@@ -1,4 +1,4 @@
-# Your startup name here
+# InkSpace
 
 [My Notes](notes.md)
 
