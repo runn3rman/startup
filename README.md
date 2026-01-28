@@ -29,7 +29,7 @@ I built a machine learning model that can read what people physically write. Ink
 
 ### Design
 
-![Design image](260sitemockups.jpg)
+![Design image](images/260sitemockups.jpg)
 
 The idea is to have the focus completely on the writing, with other pages for leaderboards, navigation, etc. 
 
@@ -69,15 +69,26 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **HTML pages** - I did not complete this part of the deliverable.
-- [ ] **Proper HTML element usage** - I did not complete this part of the deliverable.
-- [ ] **Links** - I did not complete this part of the deliverable.
-- [ ] **Text** - I did not complete this part of the deliverable.
-- [ ] **3rd party API placeholder** - I did not complete this part of the deliverable.
-- [ ] **Images** - I did not complete this part of the deliverable.
-- [ ] **Login placeholder** - I did not complete this part of the deliverable.
-- [ ] **DB data placeholder** - I did not complete this part of the deliverable.
-- [ ] **WebSocket placeholder** - I did not complete this part of the deliverable.
+- [x] **HTML pages** - Created `index.html`, `login.html`, `game.html`, `practice.html`, `leaderboards.html`, and `about.html` with consistent semantic structure.
+- [x] **Proper HTML element usage** - Added `<header>`, `<nav>`, `<main>`, `<footer>`, sections, lists, forms, tables, and canvas placeholders.
+- [x] **Links** - Wired nav links across all pages plus “Back to Home” links on content pages.
+- [x] **Text** - Added homepage description, features list, and “How it works” steps.
+- [x] **3rd party API placeholder** - Added dictionary/random word placeholder with 3rd-party services section and flow description.
+- [x] **Images** - Added local SVGs and placed images on home and practice pages with alt text.
+- [x] **Login placeholder** - Added login/register form placeholders and “Logged in as: Guest” display.
+- [x] **DB data placeholder** - Added leaderboard tables and a JSON `<pre>` block showing DB-stored records.
+- [x] **WebSocket placeholder** - Added a live feed panel with WebSocket event notes.
+
+### HTML Notes
+
+- Pages created: `index.html`, `login.html`, `game.html`, `practice.html`, `leaderboards.html`, `about.html`
+- Navigation: shared nav links to Home, Game, Practice, Leaderboards, Login, About; “Back to Home” links on content pages
+- Login placeholder: email/password login form, register form, and “Logged in as: Guest”
+- Canvas drawing area: on `game.html` and `practice.html`
+- DB placeholder: leaderboard tables + JSON block on `leaderboards.html`
+- WebSocket placeholder: live feed panel on `game.html`
+- 3rd-party placeholder: dictionary/random word services + flow on `practice.html`
+- Images: local SVG assets in `images/` and embedded on `index.html` and `practice.html`
 
 ## 🚀 CSS deliverable
 
