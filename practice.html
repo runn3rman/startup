@@ -10,7 +10,7 @@
       <h1>Ink</h1>
     </header>
 
-        <nav>
+    <nav>
       <a href="index.html">Home</a>
       <a href="game.html">Game</a>
       <a href="practice.html">Practice</a>
@@ -21,6 +21,33 @@
 
     <main>
       <h2>Practice</h2>
+      <section>
+        <label for="word-set">Word set</label>
+        <select id="word-set" name="wordSet">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+          <option value="custom">Custom</option>
+        </select>
+      </section>
+
+      <section>
+        <label for="custom-words">Add custom words</label>
+        <input id="custom-words" name="customWords" type="text" placeholder="word1, word2, word3" />
+      </section>
+
+      <section>
+        <button type="button">Get definition</button>
+        <p>3rd-party dictionary API placeholder</p>
+      </section>
+
+      <section>
+        <canvas width="600" height="300"></canvas>
+        <div>
+          <button type="button">Clear</button>
+          <button type="button">Submit Attempt</button>
+        </div>
+      </section>
       <p><a href="index.html">Back to Home</a></p>
     </main>
 
