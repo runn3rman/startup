@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" role="img" aria-labelledby="title desc">
+  <title id="title">Handwriting example</title>
+  <desc id="desc">Curved lines simulating a handwritten word with strokes</desc>
+  <rect width="600" height="240" fill="#faf9f6" />
+  <path d="M40 140 C80 80, 120 80, 160 140 C200 200, 240 200, 280 140 C320 80, 360 80, 400 140 C440 200, 480 200, 520 140" fill="none" stroke="#1b1b1b" stroke-width="6" stroke-linecap="round" />
+  <text x="42" y="70" font-family="Georgia, serif" font-size="28" fill="#444">sample</text>
+</svg>

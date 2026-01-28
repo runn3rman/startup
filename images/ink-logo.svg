@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160" role="img" aria-labelledby="title desc">
+  <title id="title">Ink logo mock</title>
+  <desc id="desc">A stylized ink droplet beside the word Ink</desc>
+  <rect width="320" height="160" fill="#f6f2eb" />
+  <circle cx="70" cy="80" r="34" fill="#111" />
+  <circle cx="86" cy="64" r="12" fill="#f6f2eb" />
+  <text x="130" y="94" font-family="Georgia, serif" font-size="48" fill="#111">Ink</text>
+</svg>
