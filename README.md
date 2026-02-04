@@ -94,18 +94,20 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Visually appealing colors and layout. No overflowing elements.** - I did not complete this part of the deliverable.
-- [ ] **Use of a CSS framework** - I did not complete this part of the deliverable.
-- [ ] **All visual elements styled using CSS** - I did not complete this part of the deliverable.
-- [ ] **Responsive to window resizing using flexbox and/or grid display** - I did not complete this part of the deliverable.
-- [ ] **Use of a imported font** - I did not complete this part of the deliverable.
-- [ ] **Use of different types of selectors including element, class, ID, and pseudo selectors** - I did not complete this part of the deliverable.
+- [x] **Visually appealing colors and layout. No overflowing elements.** - I did not complete this part of the deliverable.
+- [x] **Use of a CSS framework** - Added Tailwind via `@import 'tailwindcss';` in `src/index.css`.
+- [x] **All visual elements styled using CSS** - Added simple styles for tables, `pre`, and `canvas`, plus consistent section/form/link styling.
+- [x] **Responsive to window resizing using flexbox and/or grid display** - Made the `nav` a flex container with wrapping.
+- [x] **Use of a imported font** - Imported Google Font `Roboto` and set it on `body`.
+- [x] **Use of different types of selectors including element, class, ID, and pseudo selectors** - Used element selectors (e.g., `nav`, `section`), class selector (`.nav-link`), ID selector (`#main-nav`), and pseudo selectors (`:hover`, `:focus`, `:active`).
 
-### CSS Notes (baseline)
+### CSS Notes (summary)
 
-- shared `header`, `nav`, `main`, and `footer`.
-- Main content includes placeholder data for game state, leaderboards, login/register forms, practice flow, and WebSocket feed.
-- `src/style.css` only imports `src/index.css`, which only imports `tailwindcss`.
+- Base reset, typography, and responsive images/forms for consistent defaults.
+- Full-width layout with simple spacing and light borders on header/nav/footer.
+- Minimal styles for sections, lists, forms, buttons, tables, `pre`, and canvas.
+- Navigation uses flex-wrap and includes the GitHub repo link.
+- Tailwind imported and Google Font (Roboto)
 
 ## 🚀 React part 1: Routing deliverable
 
