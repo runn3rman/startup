@@ -21,7 +21,7 @@ body {
 h1 {
   font-size: 2rem;
   line-height: 1.2;
-  margin: 0 0 8px 0;
+  margin: 0 0 0 0;
 }
 
 h2 {
@@ -97,6 +97,16 @@ nav a:focus,
 nav a:active {
   background: #e8e8e8;
   outline: none;
+}
+
+nav a[href="https://github.com/runn3rman/startup"] {
+  background: #f5e6c8;
+  border: 1px solid #c9b38c;
+  color: #3a2f1f;
+}
+
+nav a[href="https://github.com/runn3rman/startup"]:hover {
+  background: #eedbb8;
 }
 
 section {
