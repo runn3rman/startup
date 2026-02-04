@@ -21,8 +21,8 @@ body {
 header,
 main,
 footer {
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 16px;
 }
 
@@ -42,8 +42,8 @@ footer {
 }
 
 nav {
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 8px 16px;
   border-bottom: 1px solid #e1e1e1;
   background: #ffffff;
@@ -97,7 +97,6 @@ input,
 select,
 textarea {
   width: 100%;
-  max-width: 420px;
   padding: 8px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
