@@ -101,6 +101,12 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 - [ ] **Use of a imported font** - I did not complete this part of the deliverable.
 - [ ] **Use of different types of selectors including element, class, ID, and pseudo selectors** - I did not complete this part of the deliverable.
 
+### CSS Notes (baseline)
+
+- shared `header`, `nav`, `main`, and `footer`.
+- Main content includes placeholder data for game state, leaderboards, login/register forms, practice flow, and WebSocket feed.
+- `src/style.css` only imports `src/index.css`, which only imports `tailwindcss`.
+
 ## 🚀 React part 1: Routing deliverable
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
