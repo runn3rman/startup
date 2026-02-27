@@ -1,7 +1,27 @@
 import React from 'react';
 import './scores.css';
+import { leaderboardService } from '../services';
 
 export function Scores() {
+  const [globalTop, setGlobalTop] = React.useState([]);
+  const [friendsTop, setFriendsTop] = React.useState([]);
+  const [bestByWord, setBestByWord] = React.useState([]);
+
+  React.useEffect(() => {
+    async function load() {
+      const [globalData, friendsData, wordsData] = await Promise.all([
+        leaderboardService.getGlobalTop(),
+        leaderboardService.getFriendsTop(),
+        leaderboardService.getBestByWord(),
+      ]);
+      setGlobalTop(globalData);
+      setFriendsTop(friendsData);
+      setBestByWord(wordsData);
+    }
+
+    load();
+  }, []);
+
   return (
     <main className="scores-page">
       <h2>Leaderboards</h2>
@@ -20,33 +40,17 @@ export function Scores() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>1</td>
-              <td>Avery</td>
-              <td>Velocity</td>
-              <td>98%</td>
-              <td>6.2s</td>
-              <td>980</td>
-              <td>2026-01-20</td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td>Jay</td>
-              <td>Orbit</td>
-              <td>97%</td>
-              <td>6.7s</td>
-              <td>955</td>
-              <td>2026-01-19</td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td>Grant</td>
-              <td>Echo</td>
-              <td>96%</td>
-              <td>6.9s</td>
-              <td>942</td>
-              <td>2026-01-18</td>
-            </tr>
+            {globalTop.map((row) => (
+              <tr key={row.id}>
+                <td>{row.rank}</td>
+                <td>{row.player}</td>
+                <td>{row.word}</td>
+                <td>{row.accuracy}%</td>
+                <td>{row.timeSeconds}s</td>
+                <td>{row.score}</td>
+                <td>{row.date}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </section>
@@ -66,33 +70,17 @@ export function Scores() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>1</td>
-              <td>Sky</td>
-              <td>Glide</td>
-              <td>95%</td>
-              <td>7.1s</td>
-              <td>920</td>
-              <td>2026-01-22</td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td>Grant</td>
-              <td>Flux</td>
-              <td>94%</td>
-              <td>7.4s</td>
-              <td>905</td>
-              <td>2026-01-21</td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td>Mia</td>
-              <td>Nova</td>
-              <td>93%</td>
-              <td>7.6s</td>
-              <td>890</td>
-              <td>2026-01-20</td>
-            </tr>
+            {friendsTop.map((row) => (
+              <tr key={row.id}>
+                <td>{row.rank}</td>
+                <td>{row.player}</td>
+                <td>{row.word}</td>
+                <td>{row.accuracy}%</td>
+                <td>{row.timeSeconds}s</td>
+                <td>{row.score}</td>
+                <td>{row.date}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </section>
@@ -112,33 +100,17 @@ export function Scores() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>1</td>
-              <td>Avery</td>
-              <td>Velocity</td>
-              <td>98%</td>
-              <td>6.2s</td>
-              <td>980</td>
-              <td>2026-01-20</td>
-            </tr>
-            <tr>
-              <td>1</td>
-              <td>Sky</td>
-              <td>Glide</td>
-              <td>95%</td>
-              <td>7.1s</td>
-              <td>920</td>
-              <td>2026-01-22</td>
-            </tr>
-            <tr>
-              <td>1</td>
-              <td>Mia</td>
-              <td>Nova</td>
-              <td>93%</td>
-              <td>7.6s</td>
-              <td>890</td>
-              <td>2026-01-20</td>
-            </tr>
+            {bestByWord.map((row) => (
+              <tr key={row.word}>
+                <td>{row.rank}</td>
+                <td>{row.player}</td>
+                <td>{row.word}</td>
+                <td>{row.accuracy}%</td>
+                <td>{row.timeSeconds}s</td>
+                <td>{row.score}</td>
+                <td>{row.date}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </section>
