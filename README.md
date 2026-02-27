@@ -121,8 +121,17 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **All functionality implemented or mocked out** - I did not complete this part of the deliverable.
-- [ ] **Hooks** - I did not complete this part of the deliverable.
+- [x] **All functionality implemented or mocked out** - Completed interactive React flows for `Play`, `Practice`, `Login`, and `Scores` using mock/local data sources. `Play` and `Practice` both run full round loops with start/submit/result states, timer logic, correctness checks, and live UI updates.
+- [x] **Hooks** - Implemented `useState` and `useEffect` across major components for round lifecycle, timer intervals with cleanup, auth state/loading from `localStorage`, word/definition loading, leaderboard loading, and live-feed subscription/unsubscription.
+
+### react part 2 Notes
+
+- `Play` is now a loop with phases (`idle`, `countdown`, `active`, `submitted`, `result`), timer cleanup, typing submission, correctness check, and rolling live feed updates.
+- `Practice` is now an alternate loop with word set selection, custom word parsing, definition lookup mock, timer-driven rounds, submit handling, and next-word cycling.
+- `DrawingPad` is reusable and integrated into both `Play` and `Practice`, including clear/reset behavior tied to component state.
+- `Login` uses controlled forms, validation, error/success states, and `localStorage` session persistence (`currentUser`, `authToken`).
+- `Scores` loads leaderboard views from a mock data layer and supports loading/error/empty states.
+- Mock real-time events are generated with `setInterval` and cleaned up on unmount via `useEffect` cleanup.
 
 ## 🚀 Service deliverable
 
