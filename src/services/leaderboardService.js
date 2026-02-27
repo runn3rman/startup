@@ -1,17 +1,33 @@
 const ATTEMPTS_KEY = 'ink_mock_attempts';
 
 const SEED_ATTEMPTS = [
-  { id: 'a1', player: 'Avery', word: 'velocity', accuracy: 98, timeSeconds: 6.2, score: 980, date: '2026-01-20' },
-  { id: 'a2', player: 'Jay', word: 'orbit', accuracy: 97, timeSeconds: 6.7, score: 955, date: '2026-01-19' },
-  { id: 'a3', player: 'Grant', word: 'echo', accuracy: 96, timeSeconds: 6.9, score: 942, date: '2026-01-18' },
-  { id: 'a4', player: 'Sky', word: 'glide', accuracy: 95, timeSeconds: 7.1, score: 920, date: '2026-01-22' },
-  { id: 'a5', player: 'Mia', word: 'nova', accuracy: 93, timeSeconds: 7.6, score: 890, date: '2026-01-20' },
+  { id: 'a1', player: 'Avery', word: 'velocity', isCorrect: true, timeSeconds: 6.2, date: '2026-01-20' },
+  { id: 'a2', player: 'Jay', word: 'orbit', isCorrect: true, timeSeconds: 6.7, date: '2026-01-19' },
+  { id: 'a3', player: 'Grant', word: 'echo', isCorrect: true, timeSeconds: 6.9, date: '2026-01-18' },
+  { id: 'a4', player: 'Sky', word: 'glide', isCorrect: true, timeSeconds: 7.1, date: '2026-01-22' },
+  { id: 'a5', player: 'Mia', word: 'nova', isCorrect: true, timeSeconds: 7.6, date: '2026-01-20' },
 ];
+
+function normalizeAttempt(item) {
+  const timeSeconds = item.timeSeconds ?? Number(((item.durationMs || 0) / 1000).toFixed(1));
+  const isCorrect = item.isCorrect ?? Boolean((item.accuracy || 0) >= 90);
+
+  return {
+    id: item.id || `a_${Date.now()}`,
+    player: item.player || 'Guest',
+    word: item.word || 'word',
+    isCorrect,
+    timeSeconds: Number(timeSeconds || 0),
+    date: item.date || new Date().toISOString().slice(0, 10),
+  };
+}
 
 function ensureAttempts() {
   const raw = localStorage.getItem(ATTEMPTS_KEY);
   if (raw) {
-    return JSON.parse(raw);
+    const normalized = JSON.parse(raw).map(normalizeAttempt);
+    localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(normalized));
+    return normalized;
   }
 
   localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(SEED_ATTEMPTS));
@@ -24,7 +40,8 @@ function saveAttempts(attempts) {
 
 function ranked(attempts) {
   return [...attempts]
-    .sort((a, b) => b.score - a.score || a.timeSeconds - b.timeSeconds)
+    .filter((a) => a.isCorrect)
+    .sort((a, b) => a.timeSeconds - b.timeSeconds)
     .map((attempt, index) => ({ rank: index + 1, ...attempt }));
 }
 
@@ -38,7 +55,7 @@ export async function getFriendsTop(limit = 10) {
 }
 
 export async function getBestByWord() {
-  const attempts = ensureAttempts();
+  const attempts = ensureAttempts().filter((a) => a.isCorrect);
   const bestMap = new Map();
 
   attempts.forEach((attempt) => {
@@ -51,15 +68,14 @@ export async function getBestByWord() {
   return ranked(Array.from(bestMap.values()));
 }
 
-export async function addAttempt({ player, word, accuracy, durationMs, score }) {
+export async function addAttempt({ player, word, isCorrect, durationMs }) {
   const attempts = ensureAttempts();
   const item = {
     id: `a_${Date.now()}`,
     player,
     word,
-    accuracy,
+    isCorrect,
     timeSeconds: Number((durationMs / 1000).toFixed(1)),
-    score,
     date: new Date().toISOString().slice(0, 10),
   };
 

@@ -38,12 +38,12 @@ export function Practice({ currentUser }) {
     }
 
     const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
-    const score = await scoringService.scoreAttempt({
+    const outcome = await scoringService.scoreAttempt({
       expectedWord: activeWord || words[0] || 'word',
       strokeCount,
       durationMs: 7000,
     });
-    setResult(score);
+    setResult(outcome);
   }
 
   return (
@@ -119,7 +119,8 @@ export function Practice({ currentUser }) {
           </button>
         </div>
         {!currentUser ? <p>Login required to submit.</p> : null}
-        <p>Practice score: {result?.totalScore ?? '--'}</p>
+        <p>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</p>
+        <p>Time: {result ? `${result.timeSeconds}s` : '--'}</p>
       </section>
     </main>
   );

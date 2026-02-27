@@ -4,15 +4,17 @@ import './play.css';
 import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 
-export function Play({ currentUser }) {
-  const ROUND_PHASES = {
-    IDLE: 'idle',
-    COUNTDOWN: 'countdown',
-    ACTIVE: 'active',
-    SUBMITTED: 'submitted',
-    RESULT: 'result',
-  };
+const ROUND_PHASES = {
+  IDLE: 'idle',
+  COUNTDOWN: 'countdown',
+  ACTIVE: 'active',
+  SUBMITTED: 'submitted',
+  RESULT: 'result',
+};
 
+const MAX_ROUND_SECONDS = 10;
+
+export function Play({ currentUser }) {
   const navigate = useNavigate();
   const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
   const [wordData, setWordData] = React.useState({ word: '--' });
@@ -47,7 +49,7 @@ export function Play({ currentUser }) {
     return () => {
       cancelled = true;
     };
-  }, [roundPhase, ROUND_PHASES.COUNTDOWN, ROUND_PHASES.ACTIVE]);
+  }, [roundPhase]);
 
   React.useEffect(() => {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
@@ -55,11 +57,18 @@ export function Play({ currentUser }) {
     }
 
     const timer = setInterval(() => {
-      setElapsedTime((current) => Number((current + 0.1).toFixed(1)));
+      setElapsedTime((current) => {
+        const next = Number((current + 0.1).toFixed(1));
+        if (next >= MAX_ROUND_SECONDS) {
+          setRoundPhase(ROUND_PHASES.SUBMITTED);
+          return MAX_ROUND_SECONDS;
+        }
+        return next;
+      });
     }, 100);
 
     return () => clearInterval(timer);
-  }, [roundPhase, ROUND_PHASES.ACTIVE]);
+  }, [roundPhase]);
 
   React.useEffect(() => {
     const unsubscribe = liveEventsService.subscribeToLiveEvents((event) => {
@@ -69,7 +78,52 @@ export function Play({ currentUser }) {
     return () => unsubscribe();
   }, []);
 
-  async function handleSubmit() {
+  React.useEffect(() => {
+    if (roundPhase !== ROUND_PHASES.SUBMITTED) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function finalizeRound() {
+      if (!currentUser) {
+        navigate('/login');
+        setRoundPhase(ROUND_PHASES.IDLE);
+        return;
+      }
+
+      const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
+      const outcome = await scoringService.scoreAttempt({
+        expectedWord: wordData.word,
+        strokeCount,
+        durationMs: Math.round(elapsedTime * 1000),
+      });
+      if (cancelled) {
+        return;
+      }
+
+      setResult(outcome);
+      await leaderboardService.addAttempt({
+        player: currentUser.username,
+        word: outcome.expectedWord,
+        isCorrect: outcome.isCorrect,
+        durationMs: outcome.durationMs,
+      });
+      if (cancelled) {
+        return;
+      }
+
+      setRoundPhase(ROUND_PHASES.RESULT);
+    }
+
+    finalizeRound();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roundPhase, currentUser, navigate, strokeData, wordData.word, elapsedTime]);
+
+  function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
       return;
     }
@@ -80,21 +134,6 @@ export function Play({ currentUser }) {
     }
 
     setRoundPhase(ROUND_PHASES.SUBMITTED);
-    const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
-    const score = await scoringService.scoreAttempt({
-      expectedWord: wordData.word,
-      strokeCount,
-      durationMs: Math.round(elapsedTime * 1000),
-    });
-    setResult(score);
-    await leaderboardService.addAttempt({
-      player: currentUser.username,
-      word: score.expectedWord,
-      accuracy: score.accuracy,
-      durationMs: score.durationMs,
-      score: score.totalScore,
-    });
-    setRoundPhase(ROUND_PHASES.RESULT);
   }
 
   function clearCanvas() {
@@ -125,7 +164,7 @@ export function Play({ currentUser }) {
           <strong>Word:</strong> {wordData.word.toUpperCase()}
         </p>
         <p>
-          <strong>Time:</strong> {elapsedTime.toFixed(1)}s
+          <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
         </p>
         {(roundPhase === ROUND_PHASES.IDLE || roundPhase === ROUND_PHASES.RESULT) && (
           <button type="button" onClick={startRound}>
@@ -155,9 +194,8 @@ export function Play({ currentUser }) {
         <h3>Results</h3>
         <ul>
           <li>Predicted word: {result?.predictedWord || '--'}</li>
-          <li>Accuracy score: {result ? `${result.accuracy}%` : '--'}</li>
-          <li>Speed score: {result?.speedScore ?? '--'}</li>
-          <li>Total score: {result?.totalScore ?? '--'}</li>
+          <li>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</li>
+          <li>Time: {result ? `${result.timeSeconds}s` : '--'}</li>
         </ul>
       </section>
 
@@ -167,8 +205,8 @@ export function Play({ currentUser }) {
           {feed.map((event) => (
             <li key={event.id}>
               {event.type === 'newRecord'
-                ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s (${event.accuracy}%)`
-                : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.accuracy}%)`}
+                ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
+                : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
             </li>
           ))}
         </ul>

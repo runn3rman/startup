@@ -10,7 +10,7 @@ function generateEvent() {
   const player = randomItem(PLAYERS);
   const word = randomItem(WORDS);
   const timeSeconds = Number((4 + Math.random() * 4).toFixed(1));
-  const accuracy = 90 + Math.floor(Math.random() * 10);
+  const isCorrect = Math.random() < 0.8;
 
   return {
     id: `evt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
@@ -18,7 +18,7 @@ function generateEvent() {
     player,
     word,
     timeSeconds,
-    accuracy,
+    isCorrect,
     createdAt: new Date().toISOString(),
   };
 }

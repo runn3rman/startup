@@ -33,9 +33,8 @@ export function Scores() {
               <th scope="col">Rank</th>
               <th scope="col">Player</th>
               <th scope="col">Word</th>
-              <th scope="col">Accuracy</th>
+              <th scope="col">Correct</th>
               <th scope="col">Time</th>
-              <th scope="col">Score</th>
               <th scope="col">Date</th>
             </tr>
           </thead>
@@ -45,9 +44,8 @@ export function Scores() {
                 <td>{row.rank}</td>
                 <td>{row.player}</td>
                 <td>{row.word}</td>
-                <td>{row.accuracy}%</td>
+                <td>{row.isCorrect ? 'Yes' : 'No'}</td>
                 <td>{row.timeSeconds}s</td>
-                <td>{row.score}</td>
                 <td>{row.date}</td>
               </tr>
             ))}
@@ -63,9 +61,8 @@ export function Scores() {
               <th scope="col">Rank</th>
               <th scope="col">Player</th>
               <th scope="col">Word</th>
-              <th scope="col">Accuracy</th>
+              <th scope="col">Correct</th>
               <th scope="col">Time</th>
-              <th scope="col">Score</th>
               <th scope="col">Date</th>
             </tr>
           </thead>
@@ -75,9 +72,8 @@ export function Scores() {
                 <td>{row.rank}</td>
                 <td>{row.player}</td>
                 <td>{row.word}</td>
-                <td>{row.accuracy}%</td>
+                <td>{row.isCorrect ? 'Yes' : 'No'}</td>
                 <td>{row.timeSeconds}s</td>
-                <td>{row.score}</td>
                 <td>{row.date}</td>
               </tr>
             ))}
@@ -93,9 +89,8 @@ export function Scores() {
               <th scope="col">Rank</th>
               <th scope="col">Player</th>
               <th scope="col">Word</th>
-              <th scope="col">Accuracy</th>
+              <th scope="col">Correct</th>
               <th scope="col">Time</th>
-              <th scope="col">Score</th>
               <th scope="col">Date</th>
             </tr>
           </thead>
@@ -105,9 +100,8 @@ export function Scores() {
                 <td>{row.rank}</td>
                 <td>{row.player}</td>
                 <td>{row.word}</td>
-                <td>{row.accuracy}%</td>
+                <td>{row.isCorrect ? 'Yes' : 'No'}</td>
                 <td>{row.timeSeconds}s</td>
-                <td>{row.score}</td>
                 <td>{row.date}</td>
               </tr>
             ))}
@@ -128,9 +122,8 @@ export function Scores() {
     "id": "a_5581",
     "userId": "u_1024",
     "word": "Velocity",
-    "accuracy": 0.98,
+    "isCorrect": true,
     "timeSeconds": 6.2,
-    "score": 980,
     "createdAt": "2026-01-20T21:05:44Z"
   },
   "leaderboard": {
@@ -138,7 +131,8 @@ export function Scores() {
     "rank": 1,
     "userId": "u_1024",
     "word": "Velocity",
-    "score": 980,
+    "isCorrect": true,
+    "timeSeconds": 6.2,
     "createdAt": "2026-01-20T21:06:01Z"
   }
 }`}</pre>
