@@ -11,6 +11,20 @@ import { Leaderboards } from './leaderboards/leaderboards';
 import { Login } from './login/login';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = React.useState(null);
+  const [authToken, setAuthToken] = React.useState('');
+
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    const savedToken = localStorage.getItem('authToken');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+    if (savedToken) {
+      setAuthToken(savedToken);
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="body">
@@ -54,12 +68,22 @@ export default function App() {
               </main>
             }
           />
-          <Route path="/play" element={<Play />} />
-          <Route path="/practice" element={<Practice />} />
+          <Route path="/play" element={<Play currentUser={currentUser} />} />
+          <Route path="/practice" element={<Practice currentUser={currentUser} />} />
           <Route path="/scores" element={<Scores />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/about" element={<About />} />
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              <Login
+                currentUser={currentUser}
+                setCurrentUser={setCurrentUser}
+                setAuthToken={setAuthToken}
+                authToken={authToken}
+              />
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
 

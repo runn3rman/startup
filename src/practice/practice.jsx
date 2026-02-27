@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { scoringService, wordService } from '../services';
 
-export function Practice() {
+export function Practice({ currentUser }) {
+  const navigate = useNavigate();
   const [wordSet, setWordSet] = React.useState('easy');
   const [customWords, setCustomWords] = React.useState('');
   const [words, setWords] = React.useState([]);
@@ -28,6 +30,11 @@ export function Practice() {
   }
 
   async function handleSubmitAttempt() {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const score = await scoringService.scoreAttempt({
       expectedWord: activeWord || words[0] || 'word',
       strokeCount,
@@ -112,6 +119,7 @@ export function Practice() {
             Submit Attempt
           </button>
         </div>
+        {!currentUser ? <p>Login required to submit.</p> : null}
         <p>Practice score: {result?.totalScore ?? '--'}</p>
       </section>
     </main>

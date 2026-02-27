@@ -1,8 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './play.css';
 import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
 
-export function Play() {
+export function Play({ currentUser }) {
+  const navigate = useNavigate();
   const [wordData, setWordData] = React.useState({ word: 'loading...' });
   const [timeLeft, setTimeLeft] = React.useState(8.5);
   const [strokeCount, setStrokeCount] = React.useState(0);
@@ -30,6 +32,11 @@ export function Play() {
   }, []);
 
   async function handleSubmit() {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const score = await scoringService.scoreAttempt({
       expectedWord: wordData.word,
       strokeCount,
@@ -37,7 +44,7 @@ export function Play() {
     });
     setResult(score);
     await leaderboardService.addAttempt({
-      player: 'Guest',
+      player: currentUser.username,
       word: score.expectedWord,
       accuracy: score.accuracy,
       durationMs: score.durationMs,
@@ -76,6 +83,7 @@ export function Play() {
             Submit Attempt
           </button>
         </div>
+        {!currentUser ? <p>Login required to submit.</p> : null}
       </section>
 
       <section>

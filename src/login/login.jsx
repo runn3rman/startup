@@ -5,8 +5,7 @@ const USERS_KEY = 'users';
 const CURRENT_USER_KEY = 'currentUser';
 const AUTH_TOKEN_KEY = 'authToken';
 
-export function Login() {
-  const [currentUser, setCurrentUser] = React.useState(null);
+export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
   const [loginForm, setLoginForm] = React.useState({ email: '', password: '' });
@@ -16,13 +15,6 @@ export function Login() {
     password: '',
     confirmPassword: '',
   });
-
-  React.useEffect(() => {
-    const savedUser = localStorage.getItem(CURRENT_USER_KEY);
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-  }, []);
 
   function getUsers() {
     const raw = localStorage.getItem(USERS_KEY);
@@ -38,6 +30,7 @@ export function Login() {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     setCurrentUser(user);
+    setAuthToken(token);
   }
 
   function handleLoginSubmit(event) {
@@ -100,6 +93,7 @@ export function Login() {
     localStorage.removeItem(CURRENT_USER_KEY);
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setCurrentUser(null);
+    setAuthToken('');
     setError('');
     setSuccess('Signed out');
   }
@@ -111,6 +105,7 @@ export function Login() {
         <p>
           Logged in as: <span>{currentUser?.username || 'Guest'}</span>
         </p>
+        <p>Token: {authToken || 'none'}</p>
         {currentUser ? <button onClick={handleLogout}>Sign out</button> : null}
         {error ? <p>{error}</p> : null}
         {success ? <p>{success}</p> : null}
