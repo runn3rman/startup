@@ -5,25 +5,61 @@ import { leaderboardService, liveEventsService, scoringService, wordService } fr
 import { DrawingPad } from '../components/DrawingPad';
 
 export function Play({ currentUser }) {
+  const ROUND_PHASES = {
+    IDLE: 'idle',
+    COUNTDOWN: 'countdown',
+    ACTIVE: 'active',
+    SUBMITTED: 'submitted',
+    RESULT: 'result',
+  };
+
   const navigate = useNavigate();
-  const [wordData, setWordData] = React.useState({ word: 'loading...' });
-  const [timeLeft, setTimeLeft] = React.useState(8.5);
+  const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
+  const [wordData, setWordData] = React.useState({ word: '--' });
+  const [elapsedTime, setElapsedTime] = React.useState(0);
   const [strokeData, setStrokeData] = React.useState([]);
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
 
   React.useEffect(() => {
-    wordService.getNextWord().then(setWordData);
-  }, []);
+    if (roundPhase !== ROUND_PHASES.COUNTDOWN) {
+      return;
+    }
+
+    let cancelled = false;
+    async function setupRound() {
+      const nextWord = await wordService.getNextWord();
+      if (cancelled) {
+        return;
+      }
+
+      setWordData(nextWord);
+      setResult(null);
+      setStrokeData([]);
+      setClearSignal((current) => current + 1);
+      setElapsedTime(0);
+      setRoundPhase(ROUND_PHASES.ACTIVE);
+    }
+
+    setupRound();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roundPhase, ROUND_PHASES.COUNTDOWN, ROUND_PHASES.ACTIVE]);
 
   React.useEffect(() => {
+    if (roundPhase !== ROUND_PHASES.ACTIVE) {
+      return;
+    }
+
     const timer = setInterval(() => {
-      setTimeLeft((current) => (current > 0.1 ? Number((current - 0.1).toFixed(1)) : 0));
+      setElapsedTime((current) => Number((current + 0.1).toFixed(1)));
     }, 100);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [roundPhase, ROUND_PHASES.ACTIVE]);
 
   React.useEffect(() => {
     const unsubscribe = liveEventsService.subscribeToLiveEvents((event) => {
@@ -34,16 +70,21 @@ export function Play({ currentUser }) {
   }, []);
 
   async function handleSubmit() {
+    if (roundPhase !== ROUND_PHASES.ACTIVE) {
+      return;
+    }
+
     if (!currentUser) {
       navigate('/login');
       return;
     }
 
+    setRoundPhase(ROUND_PHASES.SUBMITTED);
     const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
     const score = await scoringService.scoreAttempt({
       expectedWord: wordData.word,
       strokeCount,
-      durationMs: Math.round((8.5 - timeLeft) * 1000),
+      durationMs: Math.round(elapsedTime * 1000),
     });
     setResult(score);
     await leaderboardService.addAttempt({
@@ -53,11 +94,24 @@ export function Play({ currentUser }) {
       durationMs: score.durationMs,
       score: score.totalScore,
     });
+    setRoundPhase(ROUND_PHASES.RESULT);
   }
 
   function clearCanvas() {
+    if (roundPhase !== ROUND_PHASES.ACTIVE) {
+      return;
+    }
+
     setClearSignal((current) => current + 1);
+    setStrokeData([]);
     setResult(null);
+  }
+
+  function startRound() {
+    if (roundPhase !== ROUND_PHASES.IDLE && roundPhase !== ROUND_PHASES.RESULT) {
+      return;
+    }
+    setRoundPhase(ROUND_PHASES.COUNTDOWN);
   }
 
   return (
@@ -65,20 +119,32 @@ export function Play({ currentUser }) {
       <h2>Game</h2>
       <section>
         <p>
+          <strong>Phase:</strong> {roundPhase}
+        </p>
+        <p>
           <strong>Word:</strong> {wordData.word.toUpperCase()}
         </p>
         <p>
-          <strong>Time left:</strong> {timeLeft.toFixed(1)}s
+          <strong>Time:</strong> {elapsedTime.toFixed(1)}s
         </p>
+        {(roundPhase === ROUND_PHASES.IDLE || roundPhase === ROUND_PHASES.RESULT) && (
+          <button type="button" onClick={startRound}>
+            Start Round
+          </button>
+        )}
       </section>
 
       <section>
-        <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+        {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
+          <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+        ) : (
+          <p>Press Start Round to begin.</p>
+        )}
         <div>
-          <button type="button" onClick={clearCanvas}>
+          <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
             Clear
           </button>
-          <button type="button" onClick={handleSubmit}>
+          <button type="button" onClick={handleSubmit} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
             Submit Attempt
           </button>
         </div>
