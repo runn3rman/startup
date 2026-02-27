@@ -105,7 +105,6 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
         <p>
           Logged in as: <span>{currentUser?.username || 'Guest'}</span>
         </p>
-        <p>Token: {authToken || 'none'}</p>
         {currentUser ? <button onClick={handleLogout}>Sign out</button> : null}
         {error ? <p>{error}</p> : null}
         {success ? <p>{success}</p> : null}
