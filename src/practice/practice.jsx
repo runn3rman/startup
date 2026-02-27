@@ -11,6 +11,7 @@ export function Practice({ currentUser }) {
   const [definition, setDefinition] = React.useState('');
   const [activeWord, setActiveWord] = React.useState('');
   const [strokeData, setStrokeData] = React.useState([]);
+  const [canvasImageDataUrl, setCanvasImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
 
@@ -37,13 +38,24 @@ export function Practice({ currentUser }) {
       return;
     }
 
-    const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
-    const outcome = await scoringService.scoreAttempt({
-      expectedWord: activeWord || words[0] || 'word',
-      strokeCount,
-      durationMs: 7000,
-    });
-    setResult(outcome);
+    try {
+      const outcome = await scoringService.predictHandwriting({
+        targetWord: activeWord || words[0] || 'word',
+        strokePayload: strokeData,
+        imageDataUrl: canvasImageDataUrl,
+        durationMs: 7000,
+      });
+      setResult(outcome);
+    } catch (error) {
+      setResult({
+        predictedWord: 'Error',
+        isCorrect: false,
+        timeSeconds: 7.0,
+        imageDataUrl: canvasImageDataUrl,
+        source: 'error',
+        error: error.message || 'Prediction failed',
+      });
+    }
   }
 
   return (
@@ -103,12 +115,19 @@ export function Practice({ currentUser }) {
       </section>
 
       <section>
-        <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+        <DrawingPad
+          width={600}
+          height={300}
+          clearSignal={clearSignal}
+          onStrokeDataChange={setStrokeData}
+          onImageDataChange={setCanvasImageDataUrl}
+        />
         <div>
           <button
             type="button"
             onClick={() => {
               setClearSignal((current) => current + 1);
+              setCanvasImageDataUrl('');
               setResult(null);
             }}
           >
@@ -121,6 +140,9 @@ export function Practice({ currentUser }) {
         {!currentUser ? <p>Login required to submit.</p> : null}
         <p>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</p>
         <p>Time: {result ? `${result.timeSeconds}s` : '--'}</p>
+        <p>Image captured: {result?.imageDataUrl ? 'Yes' : 'No'}</p>
+        <p>Source: {result?.source || '--'}</p>
+        <p>Error: {result?.error || '--'}</p>
       </section>
     </main>
   );

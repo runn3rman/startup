@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function DrawingPad({ width = 600, height = 300, clearSignal = 0, onStrokeDataChange }) {
+export function DrawingPad({ width = 600, height = 300, clearSignal = 0, onStrokeDataChange, onImageDataChange }) {
   const canvasRef = React.useRef(null);
   const isDrawingRef = React.useRef(false);
   const currentStrokeRef = React.useRef(null);
@@ -9,6 +9,13 @@ export function DrawingPad({ width = 600, height = 300, clearSignal = 0, onStrok
     () => typeof window !== 'undefined' && 'PointerEvent' in window,
     []
   );
+
+  function emitImageData() {
+    if (!onImageDataChange || !canvasRef.current) {
+      return;
+    }
+    onImageDataChange(canvasRef.current.toDataURL('image/png'));
+  }
 
   const clearDrawing = React.useCallback(() => {
     const canvas = canvasRef.current;
@@ -27,7 +34,8 @@ export function DrawingPad({ width = 600, height = 300, clearSignal = 0, onStrok
     if (onStrokeDataChange) {
       onStrokeDataChange([]);
     }
-  }, [onStrokeDataChange]);
+    emitImageData();
+  }, [onStrokeDataChange, onImageDataChange]);
 
   React.useEffect(() => {
     clearDrawing();
@@ -102,6 +110,7 @@ export function DrawingPad({ width = 600, height = 300, clearSignal = 0, onStrok
       if (onStrokeDataChange) {
         onStrokeDataChange(next);
       }
+      emitImageData();
       return next;
     });
   }

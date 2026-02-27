@@ -20,6 +20,7 @@ export function Play({ currentUser }) {
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [strokeData, setStrokeData] = React.useState([]);
+  const [canvasImageDataUrl, setCanvasImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
@@ -39,6 +40,7 @@ export function Play({ currentUser }) {
       setWordData(nextWord);
       setResult(null);
       setStrokeData([]);
+      setCanvasImageDataUrl('');
       setClearSignal((current) => current + 1);
       setElapsedTime(0);
       setRoundPhase(ROUND_PHASES.ACTIVE);
@@ -92,27 +94,40 @@ export function Play({ currentUser }) {
         return;
       }
 
-      const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
-      const outcome = await scoringService.scoreAttempt({
-        expectedWord: wordData.word,
-        strokeCount,
-        durationMs: Math.round(elapsedTime * 1000),
-      });
+      try {
+        const outcome = await scoringService.predictHandwriting({
+          targetWord: wordData.word,
+          strokePayload: strokeData,
+          imageDataUrl: canvasImageDataUrl,
+          durationMs: Math.round(elapsedTime * 1000),
+        });
+        if (cancelled) {
+          return;
+        }
+
+        setResult(outcome);
+        await leaderboardService.addAttempt({
+          player: currentUser.username,
+          word: outcome.targetWord,
+          isCorrect: outcome.isCorrect,
+          durationMs: outcome.durationMs,
+        });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setResult({
+          predictedWord: 'Error',
+          isCorrect: false,
+          timeSeconds: Number(elapsedTime.toFixed(1)),
+          imageDataUrl: canvasImageDataUrl,
+          source: 'error',
+          error: error.message || 'Prediction failed',
+        });
+      }
       if (cancelled) {
         return;
       }
-
-      setResult(outcome);
-      await leaderboardService.addAttempt({
-        player: currentUser.username,
-        word: outcome.expectedWord,
-        isCorrect: outcome.isCorrect,
-        durationMs: outcome.durationMs,
-      });
-      if (cancelled) {
-        return;
-      }
-
       setRoundPhase(ROUND_PHASES.RESULT);
     }
 
@@ -121,7 +136,7 @@ export function Play({ currentUser }) {
     return () => {
       cancelled = true;
     };
-  }, [roundPhase, currentUser, navigate, strokeData, wordData.word, elapsedTime]);
+  }, [roundPhase, currentUser, navigate, strokeData, wordData.word, elapsedTime, canvasImageDataUrl]);
 
   function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
@@ -143,6 +158,7 @@ export function Play({ currentUser }) {
 
     setClearSignal((current) => current + 1);
     setStrokeData([]);
+    setCanvasImageDataUrl('');
     setResult(null);
   }
 
@@ -175,7 +191,13 @@ export function Play({ currentUser }) {
 
       <section>
         {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
-          <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+          <DrawingPad
+            width={600}
+            height={300}
+            clearSignal={clearSignal}
+            onStrokeDataChange={setStrokeData}
+            onImageDataChange={setCanvasImageDataUrl}
+          />
         ) : (
           <p>Press Start Round to begin.</p>
         )}
@@ -196,6 +218,9 @@ export function Play({ currentUser }) {
           <li>Predicted word: {result?.predictedWord || '--'}</li>
           <li>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</li>
           <li>Time: {result ? `${result.timeSeconds}s` : '--'}</li>
+          <li>Image captured: {result?.imageDataUrl ? 'Yes' : 'No'}</li>
+          <li>Source: {result?.source || '--'}</li>
+          <li>Error: {result?.error || '--'}</li>
         </ul>
       </section>
 
