@@ -23,6 +23,11 @@ export function Play({ currentUser }) {
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
+  const [isWordLoading, setIsWordLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [roundError, setRoundError] = React.useState('');
+  const [timerBeat, setTimerBeat] = React.useState(false);
+  const [resultFlash, setResultFlash] = React.useState(false);
 
   React.useEffect(() => {
     if (roundPhase !== ROUND_PHASES.COUNTDOWN) {
@@ -31,17 +36,31 @@ export function Play({ currentUser }) {
 
     let cancelled = false;
     async function setupRound() {
-      const nextWord = await wordService.getNextWord();
-      if (cancelled) {
-        return;
-      }
+      try {
+        setIsWordLoading(true);
+        setRoundError('');
+        const nextWord = await wordService.getNextWord();
+        if (cancelled) {
+          return;
+        }
 
-      setWordData(nextWord);
-      setResult(null);
-      setTypedWord('');
-      setClearSignal((current) => current + 1);
-      setElapsedTime(0);
-      setRoundPhase(ROUND_PHASES.ACTIVE);
+        setWordData(nextWord);
+        setResult(null);
+        setTypedWord('');
+        setClearSignal((current) => current + 1);
+        setElapsedTime(0);
+        setRoundPhase(ROUND_PHASES.ACTIVE);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setRoundError(error.message || 'Failed to load word');
+        setRoundPhase(ROUND_PHASES.IDLE);
+      } finally {
+        if (!cancelled) {
+          setIsWordLoading(false);
+        }
+      }
     }
 
     setupRound();
@@ -57,6 +76,7 @@ export function Play({ currentUser }) {
     }
 
     const timer = setInterval(() => {
+      setTimerBeat((current) => !current);
       setElapsedTime((current) => {
         const next = Number((current + 0.1).toFixed(1));
         if (next >= MAX_ROUND_SECONDS) {
@@ -92,6 +112,8 @@ export function Play({ currentUser }) {
         return;
       }
 
+      setIsSubmitting(true);
+      setRoundError('');
       const submittedWord = typedWord.trim();
       const targetWord = wordData.word.trim();
       const outcome = {
@@ -115,6 +137,7 @@ export function Play({ currentUser }) {
       if (cancelled) {
         return;
       }
+      setIsSubmitting(false);
       setRoundPhase(ROUND_PHASES.RESULT);
     }
 
@@ -122,8 +145,19 @@ export function Play({ currentUser }) {
 
     return () => {
       cancelled = true;
+      setIsSubmitting(false);
     };
   }, [roundPhase, currentUser, navigate, typedWord, wordData.word, elapsedTime]);
+
+  React.useEffect(() => {
+    if (!result) {
+      return;
+    }
+
+    setResultFlash(true);
+    const timeout = setTimeout(() => setResultFlash(false), 350);
+    return () => clearTimeout(timeout);
+  }, [result]);
 
   function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
@@ -165,11 +199,13 @@ export function Play({ currentUser }) {
         <p>
           <strong>Word:</strong> {wordData.word.toUpperCase()}
         </p>
-        <p>
+        <p className={timerBeat && roundPhase === ROUND_PHASES.ACTIVE ? 'play-timer-beat' : ''}>
           <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
         </p>
+        {isWordLoading ? <p>Loading next word...</p> : null}
+        {roundError ? <p>{roundError}</p> : null}
         {(roundPhase === ROUND_PHASES.IDLE || roundPhase === ROUND_PHASES.RESULT) && (
-          <button type="button" onClick={startRound}>
+          <button type="button" onClick={startRound} disabled={isWordLoading || isSubmitting}>
             Start Round
           </button>
         )}
@@ -197,36 +233,40 @@ export function Play({ currentUser }) {
           <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
             Clear
           </button>
-          <button type="button" onClick={handleSubmit} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
-            Submit Attempt
+          <button type="button" onClick={handleSubmit} disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit Attempt'}
           </button>
         </div>
         {!currentUser ? <p>Login required to submit.</p> : null}
       </section>
 
-      <section>
+      <section className={resultFlash ? 'play-result-flash' : ''}>
         <h3>Results</h3>
-        <ul>
-          <li>Predicted word: {result?.predictedWord || '--'}</li>
-          <li>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</li>
-          <li>Time: {result ? `${result.timeSeconds}s` : '--'}</li>
-          <li>Image captured: {result?.imageDataUrl ? 'Yes' : 'No'}</li>
-          <li>Source: {result?.source || '--'}</li>
-          <li>Error: {result?.error || '--'}</li>
-        </ul>
+        {isSubmitting ? <p>Checking result...</p> : null}
+        {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
+        {result ? (
+          <ul>
+            <li>Submitted word: {result.predictedWord || '--'}</li>
+            <li>Correct: {result.isCorrect ? 'Yes' : 'No'}</li>
+            <li>Time: {result.timeSeconds}s</li>
+          </ul>
+        ) : null}
       </section>
 
       <section>
         <h3>Live Feed</h3>
-        <ul>
-          {feed.map((event) => (
-            <li key={event.id}>
-              {event.type === 'newRecord'
-                ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
-                : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
-            </li>
-          ))}
-        </ul>
+        {feed.length === 0 ? <p>No live events yet.</p> : null}
+        {feed.length > 0 ? (
+          <ul>
+            {feed.map((event) => (
+              <li key={event.id}>
+                {event.type === 'newRecord'
+                  ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
+                  : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <p>Mock source: setInterval</p>
       </section>
       <p>

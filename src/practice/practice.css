@@ -1,0 +1,28 @@
+.practice-timer-beat {
+  animation: practice-timer-pulse 220ms ease-out;
+}
+
+.practice-result-flash {
+  animation: practice-result-glow 260ms ease-out;
+}
+
+@keyframes practice-timer-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes practice-result-glow {
+  0% {
+    background-color: rgba(26, 75, 140, 0.08);
+  }
+  100% {
+    background-color: transparent;
+  }
+}

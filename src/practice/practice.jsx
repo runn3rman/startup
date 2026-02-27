@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
+import './practice.css';
 
 const PRACTICE_PHASES = {
   IDLE: 'idle',
@@ -24,9 +25,15 @@ export function Practice({ currentUser }) {
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [typedWord, setTypedWord] = React.useState('');
   const [strokeData, setStrokeData] = React.useState([]);
-  const [canvasImageDataUrl, setCanvasImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
+  const [isWordsLoading, setIsWordsLoading] = React.useState(false);
+  const [wordsError, setWordsError] = React.useState('');
+  const [isDefinitionLoading, setIsDefinitionLoading] = React.useState(false);
+  const [definitionError, setDefinitionError] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [resultFlash, setResultFlash] = React.useState(false);
+  const [timerBeat, setTimerBeat] = React.useState(false);
 
   function parseCustomWords(value) {
     return value
@@ -37,16 +44,26 @@ export function Practice({ currentUser }) {
 
   React.useEffect(() => {
     async function loadWords() {
-      if (wordSet === 'custom') {
-        const parsed = parseCustomWords(customWords);
-        setWords(parsed);
-        setWordIndex(0);
-        return;
-      }
+      try {
+        setIsWordsLoading(true);
+        setWordsError('');
+        if (wordSet === 'custom') {
+          const parsed = parseCustomWords(customWords);
+          setWords(parsed);
+          setWordIndex(0);
+          return;
+        }
 
-      const data = await wordService.getPracticeWords(wordSet);
-      setWords(data.words);
-      setWordIndex(0);
+        const data = await wordService.getPracticeWords(wordSet);
+        setWords(data.words);
+        setWordIndex(0);
+      } catch (error) {
+        setWords([]);
+        setWordIndex(0);
+        setWordsError(error.message || 'Failed to load words');
+      } finally {
+        setIsWordsLoading(false);
+      }
     }
 
     loadWords();
@@ -62,6 +79,7 @@ export function Practice({ currentUser }) {
     }
 
     const timer = setInterval(() => {
+      setTimerBeat((current) => !current);
       setElapsedTime((current) => {
         const next = Number((current + 0.1).toFixed(1));
         if (next >= MAX_PRACTICE_SECONDS) {
@@ -86,6 +104,7 @@ export function Practice({ currentUser }) {
       return;
     }
 
+    setIsSubmitting(true);
     const typed = typedWord.trim();
     const target = activeWord.trim();
     setResult({
@@ -95,8 +114,18 @@ export function Practice({ currentUser }) {
       timeSeconds: Number(elapsedTime.toFixed(1)),
       strokeCount: strokeData.length,
     });
+    setIsSubmitting(false);
     setRoundPhase(PRACTICE_PHASES.RESULT);
   }, [roundPhase, currentUser, navigate, typedWord, activeWord, elapsedTime, strokeData.length]);
+
+  React.useEffect(() => {
+    if (!result) {
+      return;
+    }
+    setResultFlash(true);
+    const timeout = setTimeout(() => setResultFlash(false), 350);
+    return () => clearTimeout(timeout);
+  }, [result]);
 
   function startPracticeRound() {
     if (!activeWord) {
@@ -105,6 +134,8 @@ export function Practice({ currentUser }) {
     setElapsedTime(0);
     setTypedWord('');
     setResult(null);
+    setWordsError('');
+    setDefinitionError('');
     setStrokeData([]);
     setClearSignal((current) => current + 1);
     setRoundPhase(PRACTICE_PHASES.ACTIVE);
@@ -148,6 +179,7 @@ export function Practice({ currentUser }) {
     setDefinition('');
     setRoundPhase(PRACTICE_PHASES.IDLE);
     setResult(null);
+    setWordsError(parsed.length === 0 ? 'Enter at least one custom word.' : '');
   }
 
   async function handleGetDefinition() {
@@ -155,8 +187,17 @@ export function Practice({ currentUser }) {
       setDefinition('');
       return;
     }
-    const data = await wordService.getDefinition(activeWord);
-    setDefinition(data.definition);
+    try {
+      setIsDefinitionLoading(true);
+      setDefinitionError('');
+      const data = await wordService.getDefinition(activeWord);
+      setDefinition(data.definition);
+    } catch (error) {
+      setDefinition('');
+      setDefinitionError(error.message || 'Failed to load definition');
+    } finally {
+      setIsDefinitionLoading(false);
+    }
   }
 
   return (
@@ -170,22 +211,29 @@ export function Practice({ currentUser }) {
           <option value="hard">Hard</option>
           <option value="custom">Custom</option>
         </select>
+        {isWordsLoading ? <p>Loading words...</p> : null}
+        {wordsError ? <p>{wordsError}</p> : null}
         <p>Phase: {roundPhase}</p>
         <p>
           Active word: {activeWord || 'none'} {words.length > 0 ? `( ${wordIndex + 1}/${words.length} )` : ''}
         </p>
-        <p>
+        <p className={timerBeat && roundPhase === PRACTICE_PHASES.ACTIVE ? 'practice-timer-beat' : ''}>
           Time: {elapsedTime.toFixed(1)}s / {MAX_PRACTICE_SECONDS.toFixed(1)}s
         </p>
-        {wordSet !== 'custom' ? <p>Word bank: {words.join(', ')}</p> : null}
+        {wordSet !== 'custom' && words.length > 0 ? <p>Word bank: {words.join(', ')}</p> : null}
+        {words.length === 0 && !isWordsLoading ? <p>No words available for this set.</p> : null}
         <div>
-          <button type="button" onClick={startPracticeRound} disabled={!activeWord || roundPhase === PRACTICE_PHASES.ACTIVE}>
+          <button
+            type="button"
+            onClick={startPracticeRound}
+            disabled={!activeWord || roundPhase === PRACTICE_PHASES.ACTIVE || isWordsLoading || isSubmitting}
+          >
             Start Round
           </button>
-          <button type="button" onClick={submitPracticeRound} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE}>
-            Submit
+          <button type="button" onClick={submitPracticeRound} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit'}
           </button>
-          <button type="button" onClick={nextWord} disabled={words.length === 0}>
+          <button type="button" onClick={nextWord} disabled={words.length === 0 || isWordsLoading}>
             Next Word
           </button>
         </div>
@@ -207,10 +255,11 @@ export function Practice({ currentUser }) {
       </section>
 
       <section>
-        <button type="button" onClick={handleGetDefinition}>
-          Get definition
+        <button type="button" onClick={handleGetDefinition} disabled={!activeWord || isDefinitionLoading}>
+          {isDefinitionLoading ? 'Loading definition...' : 'Get definition'}
         </button>
         <p>{definition || 'No definition loaded.'}</p>
+        {definitionError ? <p>{definitionError}</p> : null}
       </section>
 
       <section>
@@ -224,7 +273,7 @@ export function Practice({ currentUser }) {
         <img src="/images/word-card.svg" alt="Example word prompt card labeled VELOCITY" />
       </section>
 
-      <section>
+      <section className={resultFlash ? 'practice-result-flash' : ''}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
           <div style={{ minWidth: '220px' }}>
@@ -234,22 +283,21 @@ export function Practice({ currentUser }) {
               type="text"
               value={typedWord}
               onChange={(e) => setTypedWord(e.target.value)}
-              disabled={roundPhase !== PRACTICE_PHASES.ACTIVE}
+              disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}
             />
           </div>
         </div>
         <div>
-          <button type="button" onClick={clearAttempt} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE}>
+          <button type="button" onClick={clearAttempt} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
             Clear
           </button>
         </div>
         {!currentUser ? <p>Login required to submit.</p> : null}
-        <p>Submitted word: {result?.predictedWord || '--'}</p>
-        <p>Correct: {result ? (result.isCorrect ? 'Yes' : 'No') : '--'}</p>
-        <p>Time: {result ? `${result.timeSeconds}s` : '--'}</p>
-        <p>Image captured: {result?.imageDataUrl ? 'Yes' : 'No'}</p>
-        <p>Source: {result?.source || '--'}</p>
-        <p>Error: {result?.error || '--'}</p>
+        {isSubmitting ? <p>Checking result...</p> : null}
+        {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
+        {result ? <p>Submitted word: {result.predictedWord || '--'}</p> : null}
+        {result ? <p>Correct: {result.isCorrect ? 'Yes' : 'No'}</p> : null}
+        {result ? <p>Time: {result.timeSeconds}s</p> : null}
       </section>
     </main>
   );
