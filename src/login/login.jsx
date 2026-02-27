@@ -1,10 +1,14 @@
 import React from 'react';
 import './login.css';
-import { authService } from '../services';
+
+const USERS_KEY = 'users';
+const CURRENT_USER_KEY = 'currentUser';
+const AUTH_TOKEN_KEY = 'authToken';
 
 export function Login() {
-  const [session, setSession] = React.useState(null);
-  const [message, setMessage] = React.useState('');
+  const [currentUser, setCurrentUser] = React.useState(null);
+  const [error, setError] = React.useState('');
+  const [success, setSuccess] = React.useState('');
   const [loginForm, setLoginForm] = React.useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = React.useState({
     username: '',
@@ -14,40 +18,90 @@ export function Login() {
   });
 
   React.useEffect(() => {
-    authService.getSession().then(setSession);
+    const savedUser = localStorage.getItem(CURRENT_USER_KEY);
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
   }, []);
 
-  async function handleLoginSubmit(event) {
-    event.preventDefault();
-    try {
-      const nextSession = await authService.login(loginForm);
-      setSession(nextSession);
-      setMessage('Signed in');
-    } catch (error) {
-      setMessage(error.message);
-    }
+  function getUsers() {
+    const raw = localStorage.getItem(USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
   }
 
-  async function handleRegisterSubmit(event) {
+  function saveUsers(users) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+
+  function persistSession(user) {
+    const token = `token-${Date.now()}`;
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    setCurrentUser(user);
+  }
+
+  function handleLoginSubmit(event) {
     event.preventDefault();
-    if (registerForm.password !== registerForm.confirmPassword) {
-      setMessage('Passwords do not match');
+    setError('');
+    setSuccess('');
+
+    if (!loginForm.email || !loginForm.password) {
+      setError('Email and password are required');
       return;
     }
 
-    try {
-      const nextSession = await authService.register(registerForm);
-      setSession(nextSession);
-      setMessage('Account created');
-    } catch (error) {
-      setMessage(error.message);
+    const users = getUsers();
+    const user = users.find((item) => item.email.toLowerCase() === loginForm.email.toLowerCase());
+
+    if (!user || user.password !== loginForm.password) {
+      setError('Invalid email or password');
+      return;
     }
+
+    persistSession({ username: user.username, email: user.email });
+    setSuccess('Signed in');
   }
 
-  async function handleLogout() {
-    await authService.logout();
-    setSession(null);
-    setMessage('Signed out');
+  function handleRegisterSubmit(event) {
+    event.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!registerForm.username || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
+      setError('All register fields are required');
+      return;
+    }
+
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    const users = getUsers();
+    const existing = users.find((item) => item.email.toLowerCase() === registerForm.email.toLowerCase());
+    if (existing) {
+      setError('Email already exists');
+      return;
+    }
+
+    const newUser = {
+      username: registerForm.username.trim(),
+      email: registerForm.email.trim(),
+      password: registerForm.password,
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+    persistSession({ username: newUser.username, email: newUser.email });
+    setSuccess('Account created');
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(CURRENT_USER_KEY);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    setCurrentUser(null);
+    setError('');
+    setSuccess('Signed out');
   }
 
   return (
@@ -55,10 +109,11 @@ export function Login() {
       <h2>Login</h2>
       <section>
         <p>
-          Logged in as: <span>{session?.user?.username || 'Guest'}</span>
+          Logged in as: <span>{currentUser?.username || 'Guest'}</span>
         </p>
-        {session ? <button onClick={handleLogout}>Sign out</button> : null}
-        {message ? <p>{message}</p> : null}
+        {currentUser ? <button onClick={handleLogout}>Sign out</button> : null}
+        {error ? <p>{error}</p> : null}
+        {success ? <p>{success}</p> : null}
       </section>
 
       <section>
@@ -135,7 +190,7 @@ export function Login() {
         </form>
       </section>
 
-      <p>(Service placeholder) This will call /api/auth/login and /api/auth/register</p>
+      <p>Stored in localStorage keys: users, currentUser, authToken</p>
       <p>
         <a href="/">Back to Home</a>
       </p>
