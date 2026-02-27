@@ -6,15 +6,39 @@
   margin-bottom: 8px;
 }
 
-.play-input-area {
+.play-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+}
+
+.play-main,
+.play-feed {
+  min-width: 0;
+}
+
+.play-word-wrap {
+  min-height: 64px;
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.play-word {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.play-input-area {
+  display: grid;
+  gap: 10px;
 }
 
 .typing-panel {
-  min-width: 220px;
+  width: 100%;
 }
 
 .play-timer-beat {
@@ -43,5 +67,11 @@
   }
   100% {
     background-color: transparent;
+  }
+}
+
+@media (max-width: 960px) {
+  .play-layout {
+    grid-template-columns: 1fr;
   }
 }

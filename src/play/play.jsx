@@ -16,6 +16,7 @@ const MAX_ROUND_SECONDS = 10;
 
 export function Play({ currentUser }) {
   const navigate = useNavigate();
+  const typedInputRef = React.useRef(null);
   const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
@@ -159,6 +160,12 @@ export function Play({ currentUser }) {
     return () => clearTimeout(timeout);
   }, [result]);
 
+  React.useEffect(() => {
+    if (roundPhase === ROUND_PHASES.ACTIVE) {
+      typedInputRef.current?.focus();
+    }
+  }, [roundPhase]);
+
   function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
       return;
@@ -192,83 +199,90 @@ export function Play({ currentUser }) {
   return (
     <main className="play-page">
       <h2>Game</h2>
-      <section>
-        <p>
-          <strong>Phase:</strong> {roundPhase}
-        </p>
-        <p>
-          <strong>Word:</strong> {wordData.word.toUpperCase()}
-        </p>
-        <p className={timerBeat && roundPhase === ROUND_PHASES.ACTIVE ? 'play-timer-beat' : ''}>
-          <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
-        </p>
-        {isWordLoading ? <p>Loading next word...</p> : null}
-        {roundError ? <p>{roundError}</p> : null}
-        {(roundPhase === ROUND_PHASES.IDLE || roundPhase === ROUND_PHASES.RESULT) && (
-          <button type="button" onClick={startRound} disabled={isWordLoading || isSubmitting}>
-            Start Round
-          </button>
-        )}
-      </section>
-
-      <section>
-        <div className="play-input-area">
-          {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
-            <DrawingPad width={600} height={300} clearSignal={clearSignal} />
-          ) : (
-            <p>Press Start Round to begin.</p>
-          )}
-          <div className="typing-panel">
-            <label htmlFor="typed-word">Type the word (temporary placeholder game)</label>
-            <input
-              id="typed-word"
-              type="text"
-              value={typedWord}
-              onChange={(e) => setTypedWord(e.target.value)}
-              disabled={roundPhase !== ROUND_PHASES.ACTIVE}
-            />
+      <div className="play-layout">
+        <section className="play-main">
+          <div className="play-word-wrap">
+            {(roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT) && (
+              <p className="play-word">{wordData.word.toUpperCase()}</p>
+            )}
+            {isWordLoading ? <p>Loading next word...</p> : null}
+            {roundError ? <p>{roundError}</p> : null}
+            {(roundPhase === ROUND_PHASES.IDLE || roundPhase === ROUND_PHASES.RESULT) && (
+              <button type="button" onClick={startRound} disabled={isWordLoading || isSubmitting}>
+                Start
+              </button>
+            )}
           </div>
-        </div>
-        <div>
-          <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
-            Clear
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit Attempt'}
-          </button>
-        </div>
-        {!currentUser ? <p>Login required to submit.</p> : null}
-      </section>
 
-      <section className={resultFlash ? 'play-result-flash' : ''}>
-        <h3>Results</h3>
-        {isSubmitting ? <p>Checking result...</p> : null}
-        {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
-        {result ? (
-          <ul>
-            <li>Submitted word: {result.predictedWord || '--'}</li>
-            <li>Correct: {result.isCorrect ? 'Yes' : 'No'}</li>
-            <li>Time: {result.timeSeconds}s</li>
-          </ul>
-        ) : null}
-      </section>
+          <p className={timerBeat && roundPhase === ROUND_PHASES.ACTIVE ? 'play-timer-beat' : ''}>
+            <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
+          </p>
 
-      <section>
-        <h3>Live Feed</h3>
-        {feed.length === 0 ? <p>No live events yet.</p> : null}
-        {feed.length > 0 ? (
-          <ul>
-            {feed.map((event) => (
-              <li key={event.id}>
-                {event.type === 'newRecord'
-                  ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
-                  : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <p>Mock source: setInterval</p>
-      </section>
+          {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
+            <div className="play-input-area">
+              <div className="typing-panel">
+                <label htmlFor="typed-word">Type the word</label>
+                <input
+                  ref={typedInputRef}
+                  id="typed-word"
+                  type="text"
+                  value={typedWord}
+                  onChange={(e) => setTypedWord(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                  disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}
+                />
+              </div>
+              <DrawingPad width={600} height={300} clearSignal={clearSignal} />
+            </div>
+          ) : (
+            <p></p>
+          )}
+          <div>
+            <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
+              Clear
+            </button>
+            <button type="button" onClick={handleSubmit} disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit Attempt'}
+            </button>
+          </div>
+          {!currentUser ? <p>Login required to submit.</p> : null}
+
+          <section className={resultFlash ? 'play-result-flash' : ''}>
+            <h3>Results</h3>
+            {isSubmitting ? <p>Checking result...</p> : null}
+            {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
+            {result ? (
+              <ul>
+                <li>Submitted word: {result.predictedWord || '--'}</li>
+                <li>Correct: {result.isCorrect ? 'Yes' : 'No'}</li>
+                <li>Time: {result.timeSeconds}s</li>
+              </ul>
+            ) : null}
+          </section>
+        </section>
+
+        <section className="play-feed">
+          <h3>Live Feed</h3>
+          {feed.length === 0 ? <p>No live events yet.</p> : null}
+          {feed.length > 0 ? (
+            <ul>
+              {feed.map((event) => (
+                <li key={event.id}>
+                  {event.type === 'newRecord'
+                    ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
+                    : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p>Mock source: setInterval</p>
+        </section>
+      </div>
       <p>
         <a href="/">Back to Home</a>
       </p>
