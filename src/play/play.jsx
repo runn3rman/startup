@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
-import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
+import { leaderboardService, liveEventsService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 
 const ROUND_PHASES = {
@@ -19,7 +19,7 @@ export function Play({ currentUser }) {
   const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
-  const [strokeData, setStrokeData] = React.useState([]);
+  const [typedWord, setTypedWord] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
@@ -38,7 +38,7 @@ export function Play({ currentUser }) {
 
       setWordData(nextWord);
       setResult(null);
-      setStrokeData([]);
+      setTypedWord('');
       setClearSignal((current) => current + 1);
       setElapsedTime(0);
       setRoundPhase(ROUND_PHASES.ACTIVE);
@@ -92,12 +92,15 @@ export function Play({ currentUser }) {
         return;
       }
 
-      const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
-      const outcome = await scoringService.scoreAttempt({
-        expectedWord: wordData.word,
-        strokeCount,
+      const submittedWord = typedWord.trim();
+      const targetWord = wordData.word.trim();
+      const outcome = {
+        targetWord,
+        predictedWord: submittedWord,
+        isCorrect: submittedWord.toLowerCase() === targetWord.toLowerCase(),
         durationMs: Math.round(elapsedTime * 1000),
-      });
+        timeSeconds: Number(elapsedTime.toFixed(1)),
+      };
       if (cancelled) {
         return;
       }
@@ -105,7 +108,7 @@ export function Play({ currentUser }) {
       setResult(outcome);
       await leaderboardService.addAttempt({
         player: currentUser.username,
-        word: outcome.expectedWord,
+        word: outcome.targetWord,
         isCorrect: outcome.isCorrect,
         durationMs: outcome.durationMs,
       });
@@ -121,7 +124,7 @@ export function Play({ currentUser }) {
     return () => {
       cancelled = true;
     };
-  }, [roundPhase, currentUser, navigate, strokeData, wordData.word, elapsedTime]);
+  }, [roundPhase, currentUser, navigate, typedWord, wordData.word, elapsedTime]);
 
   function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
@@ -142,7 +145,7 @@ export function Play({ currentUser }) {
     }
 
     setClearSignal((current) => current + 1);
-    setStrokeData([]);
+    setTypedWord('');
     setResult(null);
   }
 
@@ -174,11 +177,23 @@ export function Play({ currentUser }) {
       </section>
 
       <section>
-        {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
-          <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
-        ) : (
-          <p>Press Start Round to begin.</p>
-        )}
+        <div className="play-input-area">
+          {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
+            <DrawingPad width={600} height={300} clearSignal={clearSignal} />
+          ) : (
+            <p>Press Start Round to begin.</p>
+          )}
+          <div className="typing-panel">
+            <label htmlFor="typed-word">Type the word (temporary placeholder game)</label>
+            <input
+              id="typed-word"
+              type="text"
+              value={typedWord}
+              onChange={(e) => setTypedWord(e.target.value)}
+              disabled={roundPhase !== ROUND_PHASES.ACTIVE}
+            />
+          </div>
+        </div>
         <div>
           <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
             Clear
