@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
-import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
+import { leaderboardService, liveEventsService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 
 const ROUND_PHASES = {
@@ -19,8 +19,7 @@ export function Play({ currentUser }) {
   const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
-  const [strokeData, setStrokeData] = React.useState([]);
-  const [canvasImageDataUrl, setCanvasImageDataUrl] = React.useState('');
+  const [typedWord, setTypedWord] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
@@ -39,8 +38,7 @@ export function Play({ currentUser }) {
 
       setWordData(nextWord);
       setResult(null);
-      setStrokeData([]);
-      setCanvasImageDataUrl('');
+      setTypedWord('');
       setClearSignal((current) => current + 1);
       setElapsedTime(0);
       setRoundPhase(ROUND_PHASES.ACTIVE);
@@ -94,37 +92,26 @@ export function Play({ currentUser }) {
         return;
       }
 
-      try {
-        const outcome = await scoringService.predictHandwriting({
-          targetWord: wordData.word,
-          strokePayload: strokeData,
-          imageDataUrl: canvasImageDataUrl,
-          durationMs: Math.round(elapsedTime * 1000),
-        });
-        if (cancelled) {
-          return;
-        }
-
-        setResult(outcome);
-        await leaderboardService.addAttempt({
-          player: currentUser.username,
-          word: outcome.targetWord,
-          isCorrect: outcome.isCorrect,
-          durationMs: outcome.durationMs,
-        });
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setResult({
-          predictedWord: 'Error',
-          isCorrect: false,
-          timeSeconds: Number(elapsedTime.toFixed(1)),
-          imageDataUrl: canvasImageDataUrl,
-          source: 'error',
-          error: error.message || 'Prediction failed',
-        });
+      const submittedWord = typedWord.trim();
+      const targetWord = wordData.word.trim();
+      const outcome = {
+        targetWord,
+        predictedWord: submittedWord,
+        isCorrect: submittedWord.toLowerCase() === targetWord.toLowerCase(),
+        durationMs: Math.round(elapsedTime * 1000),
+        timeSeconds: Number(elapsedTime.toFixed(1)),
+      };
+      if (cancelled) {
+        return;
       }
+
+      setResult(outcome);
+      await leaderboardService.addAttempt({
+        player: currentUser.username,
+        word: outcome.targetWord,
+        isCorrect: outcome.isCorrect,
+        durationMs: outcome.durationMs,
+      });
       if (cancelled) {
         return;
       }
@@ -136,7 +123,7 @@ export function Play({ currentUser }) {
     return () => {
       cancelled = true;
     };
-  }, [roundPhase, currentUser, navigate, strokeData, wordData.word, elapsedTime, canvasImageDataUrl]);
+  }, [roundPhase, currentUser, navigate, typedWord, wordData.word, elapsedTime]);
 
   function handleSubmit() {
     if (roundPhase !== ROUND_PHASES.ACTIVE) {
@@ -157,8 +144,7 @@ export function Play({ currentUser }) {
     }
 
     setClearSignal((current) => current + 1);
-    setStrokeData([]);
-    setCanvasImageDataUrl('');
+    setTypedWord('');
     setResult(null);
   }
 
@@ -190,17 +176,23 @@ export function Play({ currentUser }) {
       </section>
 
       <section>
-        {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
-          <DrawingPad
-            width={600}
-            height={300}
-            clearSignal={clearSignal}
-            onStrokeDataChange={setStrokeData}
-            onImageDataChange={setCanvasImageDataUrl}
-          />
-        ) : (
-          <p>Press Start Round to begin.</p>
-        )}
+        <div className="play-input-area">
+          {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
+            <DrawingPad width={600} height={300} clearSignal={clearSignal} />
+          ) : (
+            <p>Press Start Round to begin.</p>
+          )}
+          <div className="typing-panel">
+            <label htmlFor="typed-word">Type the word (temporary placeholder game)</label>
+            <input
+              id="typed-word"
+              type="text"
+              value={typedWord}
+              onChange={(e) => setTypedWord(e.target.value)}
+              disabled={roundPhase !== ROUND_PHASES.ACTIVE}
+            />
+          </div>
+        </div>
         <div>
           <button type="button" onClick={clearCanvas} disabled={roundPhase !== ROUND_PHASES.ACTIVE}>
             Clear

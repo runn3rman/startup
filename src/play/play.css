@@ -5,3 +5,14 @@
 .play-page canvas {
   margin-bottom: 8px;
 }
+
+.play-input-area {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.typing-panel {
+  min-width: 220px;
+}
