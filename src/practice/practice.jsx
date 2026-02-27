@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { scoringService, wordService } from '../services';
+import { DrawingPad } from '../components/DrawingPad';
 
 export function Practice({ currentUser }) {
   const navigate = useNavigate();
@@ -9,7 +10,8 @@ export function Practice({ currentUser }) {
   const [words, setWords] = React.useState([]);
   const [definition, setDefinition] = React.useState('');
   const [activeWord, setActiveWord] = React.useState('');
-  const [strokeCount, setStrokeCount] = React.useState(0);
+  const [strokeData, setStrokeData] = React.useState([]);
+  const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
 
   React.useEffect(() => {
@@ -35,6 +37,7 @@ export function Practice({ currentUser }) {
       return;
     }
 
+    const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
     const score = await scoringService.scoreAttempt({
       expectedWord: activeWord || words[0] || 'word',
       strokeCount,
@@ -100,16 +103,12 @@ export function Practice({ currentUser }) {
       </section>
 
       <section>
-        <canvas
-          width="600"
-          height="300"
-          onPointerDown={() => setStrokeCount((current) => current + 1)}
-        ></canvas>
+        <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
         <div>
           <button
             type="button"
             onClick={() => {
-              setStrokeCount(0);
+              setClearSignal((current) => current + 1);
               setResult(null);
             }}
           >

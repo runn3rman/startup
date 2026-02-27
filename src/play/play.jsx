@@ -2,12 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
 import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
+import { DrawingPad } from '../components/DrawingPad';
 
 export function Play({ currentUser }) {
   const navigate = useNavigate();
   const [wordData, setWordData] = React.useState({ word: 'loading...' });
   const [timeLeft, setTimeLeft] = React.useState(8.5);
-  const [strokeCount, setStrokeCount] = React.useState(0);
+  const [strokeData, setStrokeData] = React.useState([]);
+  const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
 
@@ -37,6 +39,7 @@ export function Play({ currentUser }) {
       return;
     }
 
+    const strokeCount = strokeData.reduce((count, stroke) => count + stroke.points.length, 0);
     const score = await scoringService.scoreAttempt({
       expectedWord: wordData.word,
       strokeCount,
@@ -53,7 +56,7 @@ export function Play({ currentUser }) {
   }
 
   function clearCanvas() {
-    setStrokeCount(0);
+    setClearSignal((current) => current + 1);
     setResult(null);
   }
 
@@ -70,11 +73,7 @@ export function Play({ currentUser }) {
       </section>
 
       <section>
-        <canvas
-          width="600"
-          height="300"
-          onPointerDown={() => setStrokeCount((current) => current + 1)}
-        ></canvas>
+        <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
         <div>
           <button type="button" onClick={clearCanvas}>
             Clear
