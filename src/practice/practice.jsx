@@ -201,104 +201,110 @@ export function Practice({ currentUser }) {
   }
 
   return (
-    <main>
+    <main className="practice-page">
       <h2>Practice</h2>
-      <section>
-        <label htmlFor="word-set">Word set</label>
-        <select id="word-set" name="wordSet" value={wordSet} onChange={(e) => setWordSet(e.target.value)}>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-          <option value="custom">Custom</option>
-        </select>
-        {isWordsLoading ? <p>Loading words...</p> : null}
-        {wordsError ? <p>{wordsError}</p> : null}
-        <p>Phase: {roundPhase}</p>
-        <p>
-          Active word: {activeWord || 'none'} {words.length > 0 ? `( ${wordIndex + 1}/${words.length} )` : ''}
-        </p>
-        <p className={timerBeat && roundPhase === PRACTICE_PHASES.ACTIVE ? 'practice-timer-beat' : ''}>
-          Time: {elapsedTime.toFixed(1)}s / {MAX_PRACTICE_SECONDS.toFixed(1)}s
-        </p>
-        {wordSet !== 'custom' && words.length > 0 ? <p>Word bank: {words.join(', ')}</p> : null}
-        {words.length === 0 && !isWordsLoading ? <p>No words available for this set.</p> : null}
-        <div>
-          <button
-            type="button"
-            onClick={startPracticeRound}
-            disabled={!activeWord || roundPhase === PRACTICE_PHASES.ACTIVE || isWordsLoading || isSubmitting}
-          >
-            Start Round
-          </button>
-          <button type="button" onClick={submitPracticeRound} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit'}
-          </button>
-          <button type="button" onClick={nextWord} disabled={words.length === 0 || isWordsLoading}>
-            Next Word
-          </button>
-        </div>
-      </section>
+      <div className="practice-layout">
+        <div className="practice-left">
+          <section>
+            <label htmlFor="word-set">Word set</label>
+            <select id="word-set" name="wordSet" value={wordSet} onChange={(e) => setWordSet(e.target.value)}>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="custom">Custom</option>
+            </select>
+            {isWordsLoading ? <p>Loading words...</p> : null}
+            {wordsError ? <p>{wordsError}</p> : null}
+            <p>Phase: {roundPhase}</p>
+            <p>
+              Active word: {activeWord || 'none'} {words.length > 0 ? `( ${wordIndex + 1}/${words.length} )` : ''}
+            </p>
+            <p className={timerBeat && roundPhase === PRACTICE_PHASES.ACTIVE ? 'practice-timer-beat' : ''}>
+              Time: {elapsedTime.toFixed(1)}s / {MAX_PRACTICE_SECONDS.toFixed(1)}s
+            </p>
+            {wordSet !== 'custom' && words.length > 0 ? <p>Word bank: {words.join(', ')}</p> : null}
+            {words.length === 0 && !isWordsLoading ? <p>No words available for this set.</p> : null}
+            <div className="practice-actions">
+              <button
+                type="button"
+                onClick={startPracticeRound}
+                disabled={!activeWord || roundPhase === PRACTICE_PHASES.ACTIVE || isWordsLoading || isSubmitting}
+              >
+                Start Round
+              </button>
+              <button type="button" onClick={submitPracticeRound} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </button>
+              <button type="button" onClick={nextWord} disabled={words.length === 0 || isWordsLoading}>
+                Next Word
+              </button>
+            </div>
+          </section>
 
-      <section>
-        <label htmlFor="custom-words">Add custom words</label>
-        <input
-          id="custom-words"
-          name="customWords"
-          type="text"
-          placeholder="word1, word2, word3"
-          value={customWords}
-          onChange={(e) => setCustomWords(e.target.value)}
-        />
-        <button type="button" onClick={applyCustomWords} disabled={wordSet !== 'custom'}>
-          Apply Custom Words
-        </button>
-      </section>
-
-      <section>
-        <button type="button" onClick={handleGetDefinition} disabled={!activeWord || isDefinitionLoading}>
-          {isDefinitionLoading ? 'Loading definition...' : 'Get definition'}
-        </button>
-        <p>{definition || 'No definition loaded.'}</p>
-        {definitionError ? <p>{definitionError}</p> : null}
-      </section>
-
-      <section>
-        <h3>3rd-Party Services (Placeholder)</h3>
-        <ul>
-          <li>Random word API</li>
-          <li>Dictionary/definition API</li>
-          <li>Optional sponsorship/ad provider later</li>
-        </ul>
-        <p>Flow: request a random word, pull a definition for that word, then render both in the practice UI.</p>
-        <img src="/images/word-card.svg" alt="Example word prompt card labeled VELOCITY" />
-      </section>
-
-      <section className={resultFlash ? 'practice-result-flash' : ''}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
-          <div style={{ minWidth: '220px' }}>
-            <label htmlFor="practice-typed-word">Type the word</label>
+          <section>
+            <label htmlFor="custom-words">Add custom words</label>
             <input
-              id="practice-typed-word"
+              id="custom-words"
+              name="customWords"
               type="text"
-              value={typedWord}
-              onChange={(e) => setTypedWord(e.target.value)}
-              disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}
+              placeholder="word1, word2, word3"
+              value={customWords}
+              onChange={(e) => setCustomWords(e.target.value)}
             />
-          </div>
+            <button type="button" onClick={applyCustomWords} disabled={wordSet !== 'custom'}>
+              Apply Custom Words
+            </button>
+          </section>
+
+          <section>
+            <button type="button" onClick={handleGetDefinition} disabled={!activeWord || isDefinitionLoading}>
+              {isDefinitionLoading ? 'Loading definition...' : 'Get definition'}
+            </button>
+            <p>{definition || 'No definition loaded.'}</p>
+            {definitionError ? <p>{definitionError}</p> : null}
+          </section>
+
+          <section>
+            <h3>3rd-Party Services (Placeholder)</h3>
+            <ul>
+              <li>Random word API</li>
+              <li>Dictionary/definition API</li>
+              <li>Optional sponsorship/ad provider later</li>
+            </ul>
+            <p>Flow: request a random word, pull a definition for that word, then render both in the practice UI.</p>
+            <img src="/images/word-card.svg" alt="Example word prompt card labeled VELOCITY" />
+          </section>
         </div>
-        <div>
-          <button type="button" onClick={clearAttempt} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
-            Clear
-          </button>
+
+        <div className="practice-right">
+          <section className={resultFlash ? 'practice-result-flash' : ''}>
+            <div className="practice-input-area">
+              <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+              <div className="practice-typing-panel">
+                <label htmlFor="practice-typed-word">Type the word</label>
+                <input
+                  id="practice-typed-word"
+                  type="text"
+                  value={typedWord}
+                  onChange={(e) => setTypedWord(e.target.value)}
+                  disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}
+                />
+              </div>
+            </div>
+            <div>
+              <button type="button" onClick={clearAttempt} disabled={roundPhase !== PRACTICE_PHASES.ACTIVE || isSubmitting}>
+                Clear
+              </button>
+            </div>
+            {!currentUser ? <p>Login required to submit.</p> : null}
+            {isSubmitting ? <p>Checking result...</p> : null}
+            {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
+            {result ? <p>Submitted word: {result.predictedWord || '--'}</p> : null}
+            {result ? <p>Correct: {result.isCorrect ? 'Yes' : 'No'}</p> : null}
+            {result ? <p>Time: {result.timeSeconds}s</p> : null}
+          </section>
         </div>
-        {!currentUser ? <p>Login required to submit.</p> : null}
-        {isSubmitting ? <p>Checking result...</p> : null}
-        {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
-        {result ? <p>Submitted word: {result.predictedWord || '--'}</p> : null}
-        {result ? <p>Correct: {result.isCorrect ? 'Yes' : 'No'}</p> : null}
-        {result ? <p>Time: {result.timeSeconds}s</p> : null}
-      </section>
+      </div>
     </main>
   );
 }

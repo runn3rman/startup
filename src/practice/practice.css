@@ -1,3 +1,31 @@
+.practice-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+}
+
+.practice-left,
+.practice-right {
+  min-width: 0;
+}
+
+.practice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.practice-input-area {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.practice-typing-panel {
+  min-width: 220px;
+}
+
 .practice-timer-beat {
   animation: practice-timer-pulse 220ms ease-out;
 }
@@ -24,5 +52,11 @@
   }
   100% {
     background-color: transparent;
+  }
+}
+
+@media (max-width: 960px) {
+  .practice-layout {
+    grid-template-columns: 1fr;
   }
 }
