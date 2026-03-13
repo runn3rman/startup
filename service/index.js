@@ -1,8 +1,12 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const port = process.argv.length > 2 ? Number(process.argv[2]) : 4000;
+const AUTH_COOKIE_NAME = 'token';
+const SALT_ROUNDS = 10;
 
 const PLAYABLE_WORD_POOLS = {
   live: ['planet', 'orbit', 'echo', 'velocity', 'glide', 'nova', 'flux'],
@@ -64,6 +68,15 @@ app.locals.models = {
   normalizeAttempt,
 };
 
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    createdAt: user.createdAt,
+  };
+}
+
 function sendError(res, statusCode, message, extra = {}) {
   res.status(statusCode).json({ error: message, ...extra });
 }
@@ -75,6 +88,24 @@ function sendNotFound(res, message = 'Not found') {
 function sendServerError(res, error, fallbackMessage = 'Internal server error') {
   sendError(res, 500, fallbackMessage, {
     details: error?.message || fallbackMessage,
+  });
+}
+
+function setAuthCookie(res, token) {
+  res.cookie(AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie(AUTH_COOKIE_NAME, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
   });
 }
 
@@ -96,6 +127,119 @@ app.get('/api/health', (_req, res) => {
       },
     },
   });
+});
+
+app.post('/api/auth/register', async (req, res, next) => {
+  try {
+    const { username, email, password } = req.body || {};
+    const normalizedUsername = String(username || '').trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedUsername || !normalizedEmail || !password) {
+      sendError(res, 400, 'username, email, and password are required');
+      return;
+    }
+
+    const existingUser = store.users.find((user) => user.email === normalizedEmail);
+    if (existingUser) {
+      sendError(res, 409, 'Email already registered');
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), SALT_ROUNDS);
+    const user = {
+      id: uuidv4(),
+      username: normalizedUsername,
+      email: normalizedEmail,
+      passwordHash,
+      createdAt: new Date().toISOString(),
+    };
+
+    store.users.push(user);
+
+    const token = uuidv4();
+    store.sessions.set(token, {
+      token,
+      userId: user.id,
+      createdAt: new Date().toISOString(),
+    });
+
+    setAuthCookie(res, token);
+    res.status(201).json({ user: sanitizeUser(user) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body || {};
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      sendError(res, 400, 'email and password are required');
+      return;
+    }
+
+    const user = store.users.find((item) => item.email === normalizedEmail);
+    if (!user) {
+      sendError(res, 401, 'Invalid credentials');
+      return;
+    }
+
+    const matches = await bcrypt.compare(String(password), user.passwordHash);
+    if (!matches) {
+      sendError(res, 401, 'Invalid credentials');
+      return;
+    }
+
+    const token = uuidv4();
+    store.sessions.set(token, {
+      token,
+      userId: user.id,
+      createdAt: new Date().toISOString(),
+    });
+
+    setAuthCookie(res, token);
+    res.json({ user: sanitizeUser(user) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  if (token) {
+    store.sessions.delete(token);
+  }
+
+  clearAuthCookie(res);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  if (!token) {
+    sendError(res, 401, 'Unauthorized');
+    return;
+  }
+
+  const session = store.sessions.get(token);
+  if (!session) {
+    clearAuthCookie(res);
+    sendError(res, 401, 'Unauthorized');
+    return;
+  }
+
+  const user = store.users.find((item) => item.id === session.userId);
+  if (!user) {
+    store.sessions.delete(token);
+    clearAuthCookie(res);
+    sendError(res, 401, 'Unauthorized');
+    return;
+  }
+
+  res.json({ user: sanitizeUser(user) });
 });
 
 app.use('/api', (_req, res) => {
