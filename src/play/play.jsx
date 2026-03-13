@@ -128,15 +128,18 @@ export function Play({ currentUser }) {
         }
 
         setResult(outcome);
-        await leaderboardService.addAttempt(outcome);
-        if (cancelled) {
-          return;
+        try {
+          await leaderboardService.addAttempt(outcome);
+        } catch (error) {
+          if (!cancelled) {
+            setRoundError(error.message || 'Failed to save attempt');
+          }
         }
         setRoundPhase(ROUND_PHASES.RESULT);
       } catch (error) {
         if (!cancelled) {
           setRoundError(error.message || 'Failed to submit attempt');
-          setRoundPhase(ROUND_PHASES.ACTIVE);
+          setRoundPhase(ROUND_PHASES.RESULT);
         }
       } finally {
         if (!cancelled) {
@@ -197,6 +200,8 @@ export function Play({ currentUser }) {
     if (roundPhase !== ROUND_PHASES.IDLE && roundPhase !== ROUND_PHASES.RESULT) {
       return;
     }
+    setRoundError('');
+    setResult(null);
     setRoundPhase(ROUND_PHASES.COUNTDOWN);
   }
 

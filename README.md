@@ -50,14 +50,14 @@ sequenceDiagram
 
 ### Technologies
 
-I am going to use the required technologies in the following ways.
+I used the required technologies in the following ways.
 
-- **HTML** - use (header/main) semantics, a canvas for drawing, and forms for login and register
-- **CSS** - Responsive layout, clean ui (heavily focused on game page). Small animations like a countdown or feedback
-- **React** - Single page app with routes. Comps like drawing pad, timer, results, etc.
-- **Service** - Backend for: register page, getting the next word, submitting an attempt and getting a score, getting leaderboard, gotta get the ML prediction. Third party api for getting random words or showing definitions of chosen words or something.
-- **DB/Login** - Store Users, hashed passwords, session tokens, attempts, leaderboard stuff. Must be authenticated to submit.
-- **WebSocket** - Broadcast when people finish attempts or there is a new record for a word.
+- **HTML** - Semantic page structure, login/register forms, tables for scores, and a canvas-based drawing area.
+- **CSS** - Responsive layout, game-focused UI styling, and small timer/result animations.
+- **React** - Vite-based SPA with routes for play, practice, scores, leaderboards, about, and login.
+- **Service** - Express backend in `service/` for auth, words, attempts, leaderboards, and the handwriting prediction endpoint.
+- **DB/Login** - In-memory users, sessions, and attempts for this phase. Passwords are hashed with `bcryptjs`, sessions use cookie-based auth, and restricted endpoints require login.
+- **WebSocket** - Real backend WebSocket support is still planned for the later deliverable. The current live feed remains mock client-side data.
 
 ## 🚀 AWS deliverable
 
@@ -137,12 +137,43 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Node.js/Express HTTP service** - I did not complete this part of the deliverable.
-- [ ] **Static middleware for frontend** - I did not complete this part of the deliverable.
-- [ ] **Calls to third party endpoints** - I did not complete this part of the deliverable.
-- [ ] **Backend service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Frontend calls service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Supports registration, login, logout, and restricted endpoint** - I did not complete this part of the deliverable.
+- [x] **Node.js/Express HTTP service** - Built an Express backend in `service/index.js` running separately from the Vite frontend on port `4000`.
+- [x] **Static middleware for frontend** - Added `app.use(express.static('public'))` to the Express service for deployed static serving.
+- [x] **Calls to third party endpoints** - Practice mode fetches definitions directly from Merriam-Webster in the browser using `VITE_MERRIAM_WEBSTER_KEY` and displays the first `shortdef` entry.
+- [x] **Backend service endpoints** - Added endpoints for auth, word selection, prediction, attempt submission, personal attempts, and leaderboards.
+- [x] **Frontend calls service endpoints** - Replaced mock/localStorage service modules with fetch-based API clients that call relative `/api/...` routes through the Vite proxy.
+- [x] **Supports registration, login, logout, and restricted endpoint** - Added backend register/login/logout/session routes, hashed passwords with `bcryptjs`, cookie auth, and restricted endpoints like `POST /api/attempts` and `GET /api/attempts/me`.
+
+### Service Notes
+
+- Backend app: `service/index.js`
+- Frontend dev server: `npm run dev`
+- Backend dev server: `npm run service`
+- Frontend dev proxy: `vite.config.js` proxies `/api` to `http://127.0.0.1:4000`
+- Auth endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- Word endpoints: `GET /api/words/next`, `GET /api/words/practice?level=easy|medium|hard`
+- Prediction endpoint: `POST /api/predict`
+- Attempt/leaderboard endpoints: `POST /api/attempts`, `GET /api/attempts/me`, `GET /api/leaderboards/global`, `GET /api/leaderboards/friends`, `GET /api/leaderboards/words`
+- Restricted endpoints: `POST /api/attempts` and `GET /api/attempts/me` require a valid auth cookie
+- Current storage mode: in-memory only, so users, sessions, and attempts reset when the backend restarts
+- Third-party definition fetch: Merriam-Webster key stored in `.env.local` as `VITE_MERRIAM_WEBSTER_KEY`
+
+### Local Run
+
+1. Install frontend dependencies with `npm install`
+2. Install backend dependencies with `cd service && npm install`
+3. Start the backend with `npm run service`
+4. Start the frontend with `npm run dev`
+5. Restart the Vite dev server if `.env.local` changes
+
+### Validation Notes
+
+- Verified the frontend still builds successfully with `npm run build`
+- Verified the service file parses successfully with `node --check service/index.js`
+- Confirmed the frontend now loads sessions from `GET /api/auth/me` instead of localStorage
+- Confirmed gameplay/practice now use backend word and prediction endpoints plus backend attempt submission
+- Confirmed practice definitions now come from Merriam-Webster in the browser
+- Temporary limitation: all backend data is in memory for this phase, so restarting the service clears users, sessions, and attempts
 
 ## 🚀 DB deliverable
 

@@ -158,16 +158,19 @@ export function Practice({ currentUser }) {
         }
 
         setResult(outcome);
-        await leaderboardService.addAttempt(outcome);
-        if (cancelled) {
-          return;
+        try {
+          await leaderboardService.addAttempt(outcome);
+        } catch (error) {
+          if (!cancelled) {
+            setDefinitionError(error.message || 'Failed to save attempt');
+          }
         }
 
         setRoundPhase(PRACTICE_PHASES.RESULT);
       } catch (error) {
         if (!cancelled) {
           setDefinitionError(error.message || 'Failed to submit practice attempt');
-          setRoundPhase(PRACTICE_PHASES.ACTIVE);
+          setRoundPhase(PRACTICE_PHASES.RESULT);
         }
       } finally {
         if (!cancelled) {
