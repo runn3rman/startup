@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
-import { leaderboardService, liveEventsService, wordService } from '../services';
+import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 
 const ROUND_PHASES = {
@@ -21,6 +21,7 @@ export function Play({ currentUser }) {
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [typedWord, setTypedWord] = React.useState('');
+  const [imageDataUrl, setImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
@@ -113,33 +114,35 @@ export function Play({ currentUser }) {
         return;
       }
 
-      setIsSubmitting(true);
-      setRoundError('');
-      const submittedWord = typedWord.trim();
-      const targetWord = wordData.word.trim();
-      const outcome = {
-        targetWord,
-        predictedWord: submittedWord,
-        isCorrect: submittedWord.toLowerCase() === targetWord.toLowerCase(),
-        durationMs: Math.round(elapsedTime * 1000),
-        timeSeconds: Number(elapsedTime.toFixed(1)),
-      };
-      if (cancelled) {
-        return;
-      }
+      try {
+        setIsSubmitting(true);
+        setRoundError('');
+        const targetWord = wordData.word.trim();
+        const outcome = await scoringService.predictHandwriting({
+          targetWord,
+          imageDataUrl,
+          durationMs: Math.round(elapsedTime * 1000),
+        });
+        if (cancelled) {
+          return;
+        }
 
-      setResult(outcome);
-      await leaderboardService.addAttempt({
-        player: currentUser.username,
-        word: outcome.targetWord,
-        isCorrect: outcome.isCorrect,
-        durationMs: outcome.durationMs,
-      });
-      if (cancelled) {
-        return;
+        setResult(outcome);
+        await leaderboardService.addAttempt(outcome);
+        if (cancelled) {
+          return;
+        }
+        setRoundPhase(ROUND_PHASES.RESULT);
+      } catch (error) {
+        if (!cancelled) {
+          setRoundError(error.message || 'Failed to submit attempt');
+          setRoundPhase(ROUND_PHASES.ACTIVE);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSubmitting(false);
+        }
       }
-      setIsSubmitting(false);
-      setRoundPhase(ROUND_PHASES.RESULT);
     }
 
     finalizeRound();
@@ -148,7 +151,7 @@ export function Play({ currentUser }) {
       cancelled = true;
       setIsSubmitting(false);
     };
-  }, [roundPhase, currentUser, navigate, typedWord, wordData.word, elapsedTime]);
+  }, [roundPhase, currentUser, navigate, wordData.word, elapsedTime, imageDataUrl]);
 
   React.useEffect(() => {
     if (!result) {
@@ -186,6 +189,7 @@ export function Play({ currentUser }) {
 
     setClearSignal((current) => current + 1);
     setTypedWord('');
+    setImageDataUrl('');
     setResult(null);
   }
 
@@ -237,7 +241,7 @@ export function Play({ currentUser }) {
                   disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}
                 />
               </div>
-              <DrawingPad width={600} height={300} clearSignal={clearSignal} />
+              <DrawingPad width={600} height={300} clearSignal={clearSignal} onImageDataChange={setImageDataUrl} />
             </div>
           ) : (
             <p></p>
@@ -259,6 +263,7 @@ export function Play({ currentUser }) {
             {result ? (
               <ul>
                 <li>Submitted word: {result.predictedWord || '--'}</li>
+                <li>Typed word: {typedWord || '--'}</li>
                 <li>Correct: {result.isCorrect ? 'Yes' : 'No'}</li>
                 <li>Time: {result.timeSeconds}s</li>
               </ul>

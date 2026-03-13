@@ -33,3 +33,7 @@ export async function getAttempts() {
   const body = await apiGet('/api/attempts/me', 'Failed to load attempts');
   return body.attempts;
 }
+
+export async function getMyAttemptSummary() {
+  return apiGet('/api/attempts/me', 'Failed to load attempts');
+}

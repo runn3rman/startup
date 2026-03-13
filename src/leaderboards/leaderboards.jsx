@@ -113,7 +113,7 @@ export function Leaderboards() {
           </thead>
           <tbody>
             {bestByWord.map((row) => (
-              <tr key={row.word}>
+              <tr key={row.id || row.word}>
                 <td>{row.word}</td>
                 <td>{row.player}</td>
                 <td>{row.timeSeconds}s</td>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { wordService } from '../services';
+import { leaderboardService, scoringService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 import './practice.css';
 
@@ -25,6 +25,7 @@ export function Practice({ currentUser }) {
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [typedWord, setTypedWord] = React.useState('');
   const [strokeData, setStrokeData] = React.useState([]);
+  const [imageDataUrl, setImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [isWordsLoading, setIsWordsLoading] = React.useState(false);
@@ -74,6 +75,42 @@ export function Practice({ currentUser }) {
   }, [words, wordIndex]);
 
   React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadDefinitionForActiveWord() {
+      if (!activeWord) {
+        setDefinition('');
+        setDefinitionError('');
+        return;
+      }
+
+      try {
+        setIsDefinitionLoading(true);
+        setDefinitionError('');
+        const data = await wordService.getDefinition(activeWord);
+        if (!cancelled) {
+          setDefinition(data.definition);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDefinition('');
+          setDefinitionError(error.message || 'Failed to load definition');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsDefinitionLoading(false);
+        }
+      }
+    }
+
+    loadDefinitionForActiveWord();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWord]);
+
+  React.useEffect(() => {
     if (roundPhase !== PRACTICE_PHASES.ACTIVE) {
       return;
     }
@@ -98,25 +135,53 @@ export function Practice({ currentUser }) {
       return;
     }
 
-    if (!currentUser) {
-      navigate('/login');
-      setRoundPhase(PRACTICE_PHASES.IDLE);
-      return;
+    let cancelled = false;
+
+    async function finalizePracticeRound() {
+      if (!currentUser) {
+        navigate('/login');
+        setRoundPhase(PRACTICE_PHASES.IDLE);
+        return;
+      }
+
+      try {
+        setIsSubmitting(true);
+        setDefinitionError('');
+        const outcome = await scoringService.predictHandwriting({
+          targetWord: activeWord.trim(),
+          imageDataUrl,
+          durationMs: Math.round(elapsedTime * 1000),
+          strokePayload: strokeData,
+        });
+        if (cancelled) {
+          return;
+        }
+
+        setResult(outcome);
+        await leaderboardService.addAttempt(outcome);
+        if (cancelled) {
+          return;
+        }
+
+        setRoundPhase(PRACTICE_PHASES.RESULT);
+      } catch (error) {
+        if (!cancelled) {
+          setDefinitionError(error.message || 'Failed to submit practice attempt');
+          setRoundPhase(PRACTICE_PHASES.ACTIVE);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSubmitting(false);
+        }
+      }
     }
 
-    setIsSubmitting(true);
-    const typed = typedWord.trim();
-    const target = activeWord.trim();
-    setResult({
-      targetWord: target,
-      predictedWord: typed,
-      isCorrect: typed.toLowerCase() === target.toLowerCase(),
-      timeSeconds: Number(elapsedTime.toFixed(1)),
-      strokeCount: strokeData.length,
-    });
-    setIsSubmitting(false);
-    setRoundPhase(PRACTICE_PHASES.RESULT);
-  }, [roundPhase, currentUser, navigate, typedWord, activeWord, elapsedTime, strokeData.length]);
+    finalizePracticeRound();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roundPhase, currentUser, navigate, activeWord, elapsedTime, imageDataUrl, strokeData]);
 
   React.useEffect(() => {
     if (!result) {
@@ -137,6 +202,7 @@ export function Practice({ currentUser }) {
     setWordsError('');
     setDefinitionError('');
     setStrokeData([]);
+    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setRoundPhase(PRACTICE_PHASES.ACTIVE);
   }
@@ -154,6 +220,7 @@ export function Practice({ currentUser }) {
     }
     setTypedWord('');
     setStrokeData([]);
+    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setResult(null);
   }
@@ -167,6 +234,7 @@ export function Practice({ currentUser }) {
     setElapsedTime(0);
     setTypedWord('');
     setStrokeData([]);
+    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setResult(null);
     setRoundPhase(PRACTICE_PHASES.IDLE);
@@ -279,7 +347,13 @@ export function Practice({ currentUser }) {
         <div className="practice-right">
           <section className={resultFlash ? 'practice-result-flash' : ''}>
             <div className="practice-input-area">
-              <DrawingPad width={600} height={300} clearSignal={clearSignal} onStrokeDataChange={setStrokeData} />
+              <DrawingPad
+                width={600}
+                height={300}
+                clearSignal={clearSignal}
+                onStrokeDataChange={setStrokeData}
+                onImageDataChange={setImageDataUrl}
+              />
               <div className="practice-typing-panel">
                 <label htmlFor="practice-typed-word">Type the word</label>
                 <input
@@ -300,6 +374,7 @@ export function Practice({ currentUser }) {
             {isSubmitting ? <p>Checking result...</p> : null}
             {!isSubmitting && !result ? <p>No attempt submitted yet.</p> : null}
             {result ? <p>Submitted word: {result.predictedWord || '--'}</p> : null}
+            {result ? <p>Typed word: {typedWord || '--'}</p> : null}
             {result ? <p>Correct: {result.isCorrect ? 'Yes' : 'No'}</p> : null}
             {result ? <p>Time: {result.timeSeconds}s</p> : null}
           </section>

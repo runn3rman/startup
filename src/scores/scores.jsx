@@ -2,19 +2,11 @@ import React from 'react';
 import './scores.css';
 import { leaderboardService } from '../services';
 
-export function Scores() {
-  const [currentUser, setCurrentUser] = React.useState(null);
+export function Scores({ currentUser }) {
   const [myBestScores, setMyBestScores] = React.useState([]);
   const [myScoresByWord, setMyScoresByWord] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState('');
-
-  React.useEffect(() => {
-    const saved = localStorage.getItem('currentUser');
-    if (saved) {
-      setCurrentUser(JSON.parse(saved));
-    }
-  }, []);
 
   async function load() {
     if (!currentUser?.username) {
@@ -26,42 +18,9 @@ export function Scores() {
     try {
       setIsLoading(true);
       setLoadError('');
-      const attempts = await leaderboardService.getAttempts();
-      const myAttempts = attempts.filter((attempt) => attempt.player === currentUser.username);
-
-      const bestScores = [...myAttempts]
-        .filter((attempt) => attempt.isCorrect)
-        .sort((a, b) => a.timeSeconds - b.timeSeconds)
-        .slice(0, 10)
-        .map((attempt, index) => ({ rank: index + 1, ...attempt }));
-
-      const byWordMap = new Map();
-      myAttempts.forEach((attempt) => {
-        const key = attempt.word;
-        const current = byWordMap.get(key);
-        if (!current) {
-          byWordMap.set(key, {
-            word: key,
-            attempts: 1,
-            correctAttempts: attempt.isCorrect ? 1 : 0,
-            bestTime: attempt.isCorrect ? attempt.timeSeconds : null,
-            latestTime: attempt.timeSeconds,
-          });
-          return;
-        }
-
-        current.attempts += 1;
-        current.correctAttempts += attempt.isCorrect ? 1 : 0;
-        current.latestTime = attempt.timeSeconds;
-        if (attempt.isCorrect && (current.bestTime === null || attempt.timeSeconds < current.bestTime)) {
-          current.bestTime = attempt.timeSeconds;
-        }
-      });
-
-      const byWord = Array.from(byWordMap.values()).sort((a, b) => a.word.localeCompare(b.word));
-
-      setMyBestScores(bestScores);
-      setMyScoresByWord(byWord);
+      const summary = await leaderboardService.getMyAttemptSummary();
+      setMyBestScores(summary.bestScores || []);
+      setMyScoresByWord(summary.byWord || []);
     } catch (error) {
       setMyBestScores([]);
       setMyScoresByWord([]);

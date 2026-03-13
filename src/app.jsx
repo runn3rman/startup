@@ -104,7 +104,7 @@ export default function App() {
           />
           <Route path="/play" element={<Play currentUser={currentUser} />} />
           <Route path="/practice" element={<Practice currentUser={currentUser} />} />
-          <Route path="/scores" element={<Scores />} />
+          <Route path="/scores" element={<Scores currentUser={currentUser} />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/about" element={<About />} />
           <Route
