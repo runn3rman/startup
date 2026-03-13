@@ -1,3 +1,5 @@
+import { apiPost } from './apiClient';
+
 export async function predictHandwriting({ targetWord, strokePayload = [], imageDataUrl = '', durationMs = 0 }) {
   const strokeCount = strokePayload.length;
   const pointCount = strokePayload.reduce((sum, stroke) => sum + stroke.points.length, 0);
@@ -7,26 +9,7 @@ export async function predictHandwriting({ targetWord, strokePayload = [], image
     throw new Error('No canvas image found');
   }
 
-  const response = await fetch('/api/predict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageDataUrl, targetWord }),
-  });
-
-  if (!response.ok) {
-    let message = 'Prediction request failed';
-    try {
-      const errorBody = await response.json();
-      if (errorBody?.error) {
-        message = errorBody.error;
-      }
-    } catch {
-      // keep default message
-    }
-    throw new Error(message);
-  }
-
-  const body = await response.json();
+  const body = await apiPost('/api/predict', { imageDataUrl, targetWord }, 'Prediction request failed');
   const predictedWord = (body.predictedWord || '').trim();
   if (!predictedWord) {
     throw new Error('Prediction response was empty');

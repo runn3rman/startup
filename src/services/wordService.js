@@ -1,12 +1,7 @@
-const WORDS = ['planet', 'orbit', 'echo', 'velocity', 'glide', 'nova', 'flux'];
+import { apiGet } from './apiClient';
 
 export async function getNextWord() {
-  const word = WORDS[Math.floor(Math.random() * WORDS.length)];
-  return {
-    word,
-    source: 'mock-random-word-api',
-    fetchedAt: new Date().toISOString(),
-  };
+  return apiGet('/api/words/next', 'Failed to load word');
 }
 
 export async function getDefinition(word) {
@@ -19,15 +14,5 @@ export async function getDefinition(word) {
 }
 
 export async function getPracticeWords(level = 'easy') {
-  const byLevel = {
-    easy: ['cat', 'dog', 'sun'],
-    medium: ['planet', 'window', 'garden'],
-    hard: ['velocity', 'synchronize', 'trajectory'],
-  };
-
-  return {
-    level,
-    words: byLevel[level] || byLevel.easy,
-    fetchedAt: new Date().toISOString(),
-  };
+  return apiGet(`/api/words/practice?level=${encodeURIComponent(level)}`, 'Failed to load practice words');
 }
