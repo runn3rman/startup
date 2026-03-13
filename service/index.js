@@ -176,6 +176,66 @@ function pickRandomWord(words) {
   return words[index];
 }
 
+function rankAttempts(attempts, limit) {
+  const ranked = [...attempts]
+    .filter((attempt) => attempt.isCorrect)
+    .sort((a, b) => a.timeSeconds - b.timeSeconds)
+    .map((attempt, index) => ({ rank: index + 1, ...attempt }));
+
+  return typeof limit === 'number' ? ranked.slice(0, limit) : ranked;
+}
+
+function getFriendsAttempts() {
+  const friendNames = new Set(['Grant', 'Sky', 'Mia']);
+  return store.attempts.filter((attempt) => friendNames.has(attempt.player));
+}
+
+function getBestAttemptsByWord() {
+  const bestMap = new Map();
+
+  store.attempts
+    .filter((attempt) => attempt.isCorrect)
+    .forEach((attempt) => {
+      const current = bestMap.get(attempt.word);
+      if (!current || attempt.timeSeconds < current.timeSeconds) {
+        bestMap.set(attempt.word, attempt);
+      }
+    });
+
+  return rankAttempts(Array.from(bestMap.values()));
+}
+
+function getAttemptsByUser(userId) {
+  return store.attempts.filter((attempt) => attempt.userId === userId);
+}
+
+function summarizeAttemptsByWord(attempts) {
+  const byWordMap = new Map();
+
+  attempts.forEach((attempt) => {
+    const current = byWordMap.get(attempt.word);
+    if (!current) {
+      byWordMap.set(attempt.word, {
+        word: attempt.word,
+        attempts: 1,
+        correctAttempts: attempt.isCorrect ? 1 : 0,
+        bestTime: attempt.isCorrect ? attempt.timeSeconds : null,
+        latestTime: attempt.timeSeconds,
+      });
+      return;
+    }
+
+    current.attempts += 1;
+    current.correctAttempts += attempt.isCorrect ? 1 : 0;
+    current.latestTime = attempt.timeSeconds;
+    if (attempt.isCorrect && (current.bestTime === null || attempt.timeSeconds < current.bestTime)) {
+      current.bestTime = attempt.timeSeconds;
+    }
+  });
+
+  return Array.from(byWordMap.values()).sort((a, b) => a.word.localeCompare(b.word));
+}
+
 function parseImageDataUrl(imageDataUrl) {
   if (typeof imageDataUrl !== 'string') {
     throw new Error('imageDataUrl is required');
@@ -363,6 +423,58 @@ app.post('/api/predict', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+app.post('/api/attempts', requireAuth, (req, res) => {
+  const payload = req.body || {};
+  const targetWord = String(payload.targetWord || payload.word || '').trim();
+
+  if (!targetWord) {
+    sendError(res, 400, 'targetWord is required');
+    return;
+  }
+
+  const savedAttempt = normalizeAttempt({
+    id: uuidv4(),
+    userId: req.user.id,
+    player: req.user.username,
+    word: targetWord,
+    targetWord,
+    predictedWord: String(payload.predictedWord || '').trim(),
+    isCorrect: payload.isCorrect,
+    accuracy: payload.accuracy,
+    durationMs: payload.durationMs ?? (payload.timeSeconds ? Number(payload.timeSeconds) * 1000 : 0),
+    source: payload.source || 'submitted',
+    createdAt: new Date().toISOString(),
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  store.attempts.push(savedAttempt);
+  res.status(201).json({ attempt: savedAttempt });
+});
+
+app.get('/api/attempts/me', requireAuth, (req, res) => {
+  const attempts = getAttemptsByUser(req.user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const bestScores = rankAttempts(attempts, 10);
+  const byWord = summarizeAttemptsByWord(attempts);
+
+  res.json({
+    attempts,
+    bestScores,
+    byWord,
+  });
+});
+
+app.get('/api/leaderboards/global', (_req, res) => {
+  res.json(rankAttempts(store.attempts, 10));
+});
+
+app.get('/api/leaderboards/friends', (_req, res) => {
+  res.json(rankAttempts(getFriendsAttempts(), 10));
+});
+
+app.get('/api/leaderboards/words', (_req, res) => {
+  res.json(getBestAttemptsByWord());
 });
 
 app.use('/api', (_req, res) => {
