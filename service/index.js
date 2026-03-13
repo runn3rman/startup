@@ -159,6 +159,15 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function pickRandomWord(words) {
+  if (!Array.isArray(words) || words.length === 0) {
+    return null;
+  }
+
+  const index = Math.floor(Math.random() * words.length);
+  return words[index];
+}
+
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.static('public'));
@@ -269,6 +278,32 @@ app.post('/api/auth/logout', (req, res) => {
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ user: sanitizeUser(req.user) });
+});
+
+app.get('/api/words/next', (_req, res) => {
+  const word = pickRandomWord(store.wordPools.live);
+  if (!word) {
+    sendError(res, 500, 'No live words available');
+    return;
+  }
+
+  res.json({
+    word,
+    fetchedAt: new Date().toISOString(),
+    source: 'service-word-pool',
+  });
+});
+
+app.get('/api/words/practice', (req, res) => {
+  const requestedLevel = String(req.query.level || 'easy').toLowerCase();
+  const resolvedLevel = store.wordPools.practice[requestedLevel] ? requestedLevel : 'easy';
+  const words = store.wordPools.practice[resolvedLevel];
+
+  res.json({
+    level: resolvedLevel,
+    words,
+    fetchedAt: new Date().toISOString(),
+  });
 });
 
 app.use('/api', (_req, res) => {
