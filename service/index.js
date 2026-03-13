@@ -1,12 +1,20 @@
+const { execFile } = require('child_process');
 const express = require('express');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+const { promisify } = require('util');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
 
+const execFileAsync = promisify(execFile);
 const app = express();
 const port = process.argv.length > 2 ? Number(process.argv[2]) : 4000;
 const AUTH_COOKIE_NAME = 'token';
 const SALT_ROUNDS = 10;
+const PYTHON_BIN = process.env.PYTHON_BIN || '/usr/local/bin/python3';
+const PREDICT_SCRIPT = path.join(process.cwd(), 'model', 'predict_word.py');
 
 const PLAYABLE_WORD_POOLS = {
   live: ['planet', 'orbit', 'echo', 'velocity', 'glide', 'nova', 'flux'],
@@ -168,6 +176,48 @@ function pickRandomWord(words) {
   return words[index];
 }
 
+function parseImageDataUrl(imageDataUrl) {
+  if (typeof imageDataUrl !== 'string') {
+    throw new Error('imageDataUrl is required');
+  }
+
+  const match = imageDataUrl.match(/^data:image\/png;base64,(.+)$/);
+  if (!match) {
+    throw new Error('imageDataUrl must be a PNG data URL');
+  }
+
+  return Buffer.from(match[1], 'base64');
+}
+
+async function runPrediction(imageDataUrl) {
+  let tempDir = '';
+
+  try {
+    const imageBuffer = parseImageDataUrl(imageDataUrl);
+
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ink-predict-'));
+    const imagePath = path.join(tempDir, 'input.png');
+    await fs.writeFile(imagePath, imageBuffer);
+
+    const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [PREDICT_SCRIPT, imagePath], {
+      cwd: process.cwd(),
+      timeout: 120000,
+      maxBuffer: 1024 * 1024,
+    });
+
+    const predictedWord = String(stdout).trim().split('\n').pop() || '';
+    if (!predictedWord) {
+      throw new Error(stderr || 'No prediction returned by Python script');
+    }
+
+    return predictedWord;
+  } finally {
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.static('public'));
@@ -304,6 +354,15 @@ app.get('/api/words/practice', (req, res) => {
     words,
     fetchedAt: new Date().toISOString(),
   });
+});
+
+app.post('/api/predict', async (req, res, next) => {
+  try {
+    const predictedWord = await runPrediction(req.body?.imageDataUrl);
+    res.json({ predictedWord });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use('/api', (_req, res) => {
