@@ -1,13 +1,11 @@
 import React from 'react';
+import { authService } from '../services';
 import './login.css';
-
-const USERS_KEY = 'users';
-const CURRENT_USER_KEY = 'currentUser';
-const AUTH_TOKEN_KEY = 'authToken';
 
 export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [loginForm, setLoginForm] = React.useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = React.useState({
     username: '',
@@ -16,24 +14,12 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
     confirmPassword: '',
   });
 
-  function getUsers() {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }
-
-  function saveUsers(users) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }
-
   function persistSession(user) {
-    const token = `token-${Date.now()}`;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
     setCurrentUser(user);
-    setAuthToken(token);
+    setAuthToken('cookie-session');
   }
 
-  function handleLoginSubmit(event) {
+  async function handleLoginSubmit(event) {
     event.preventDefault();
     setError('');
     setSuccess('');
@@ -43,19 +29,19 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
       return;
     }
 
-    const users = getUsers();
-    const user = users.find((item) => item.email.toLowerCase() === loginForm.email.toLowerCase());
-
-    if (!user || user.password !== loginForm.password) {
-      setError('Invalid email or password');
-      return;
+    try {
+      setIsSubmitting(true);
+      const session = await authService.login(loginForm);
+      persistSession(session.user);
+      setSuccess('Signed in');
+    } catch (submitError) {
+      setError(submitError.message || 'Invalid email or password');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    persistSession({ username: user.username, email: user.email });
-    setSuccess('Signed in');
   }
 
-  function handleRegisterSubmit(event) {
+  async function handleRegisterSubmit(event) {
     event.preventDefault();
     setError('');
     setSuccess('');
@@ -70,32 +56,35 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
       return;
     }
 
-    const users = getUsers();
-    const existing = users.find((item) => item.email.toLowerCase() === registerForm.email.toLowerCase());
-    if (existing) {
-      setError('Email already exists');
-      return;
+    try {
+      setIsSubmitting(true);
+      const session = await authService.register({
+        username: registerForm.username.trim(),
+        email: registerForm.email.trim(),
+        password: registerForm.password,
+      });
+      persistSession(session.user);
+      setSuccess('Account created');
+    } catch (submitError) {
+      setError(submitError.message || 'Failed to create account');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newUser = {
-      username: registerForm.username.trim(),
-      email: registerForm.email.trim(),
-      password: registerForm.password,
-    };
-
-    users.push(newUser);
-    saveUsers(users);
-    persistSession({ username: newUser.username, email: newUser.email });
-    setSuccess('Account created');
   }
 
-  function handleLogout() {
-    localStorage.removeItem(CURRENT_USER_KEY);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    setCurrentUser(null);
-    setAuthToken('');
-    setError('');
-    setSuccess('Signed out');
+  async function handleLogout() {
+    try {
+      setIsSubmitting(true);
+      await authService.logout();
+      setCurrentUser(null);
+      setAuthToken('');
+      setError('');
+      setSuccess('Signed out');
+    } catch (submitError) {
+      setError(submitError.message || 'Failed to sign out');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -105,7 +94,11 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
         <p>
           Logged in as: <span>{currentUser?.username || 'Guest'}</span>
         </p>
-        {currentUser ? <button onClick={handleLogout}>Sign out</button> : null}
+        {currentUser ? (
+          <button onClick={handleLogout} disabled={isSubmitting}>
+            {isSubmitting ? 'Signing out...' : 'Sign out'}
+          </button>
+        ) : null}
         {error ? <p>{error}</p> : null}
         {success ? <p>{success}</p> : null}
       </section>
@@ -133,7 +126,9 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
             onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
           />
 
-          <button type="submit">Sign in</button>
+          <button type="submit" disabled={isSubmitting || Boolean(authToken)}>
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          </button>
         </form>
       </section>
 
@@ -180,11 +175,13 @@ export function Login({ currentUser, setCurrentUser, setAuthToken, authToken }) 
             onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
           />
 
-          <button type="submit">Create account</button>
+          <button type="submit" disabled={isSubmitting || Boolean(authToken)}>
+            {isSubmitting ? 'Creating...' : 'Create account'}
+          </button>
         </form>
       </section>
 
-      <p>Stored in localStorage keys: users, currentUser, authToken</p>
+      <p>Authentication uses backend sessions and auth cookies.</p>
       <p>
         <a href="/">Back to Home</a>
       </p>

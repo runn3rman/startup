@@ -9,21 +9,55 @@ import { About } from './about/about';
 import { Practice } from './practice/practice';
 import { Leaderboards } from './leaderboards/leaderboards';
 import { Login } from './login/login';
+import { authService } from './services';
 
 export default function App() {
   const [currentUser, setCurrentUser] = React.useState(null);
   const [authToken, setAuthToken] = React.useState('');
+  const [isSessionLoading, setIsSessionLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    const savedToken = localStorage.getItem('authToken');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        const session = await authService.getSession();
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentUser(session?.user || null);
+        setAuthToken(session?.token || '');
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentUser(null);
+        setAuthToken('');
+      } finally {
+        if (!cancelled) {
+          setIsSessionLoading(false);
+        }
+      }
     }
-    if (savedToken) {
-      setAuthToken(savedToken);
-    }
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  if (isSessionLoading) {
+    return (
+      <main>
+        <section>
+          <p>Loading session...</p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <BrowserRouter>
