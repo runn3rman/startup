@@ -1,5 +1,6 @@
 const { execFile } = require('child_process');
 const express = require('express');
+const { existsSync } = require('fs');
 const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
@@ -15,6 +16,7 @@ const AUTH_COOKIE_NAME = 'token';
 const SALT_ROUNDS = 10;
 const PYTHON_BIN = process.env.PYTHON_BIN || 'python3';
 const PREDICT_SCRIPT = path.join(process.cwd(), 'model', 'predict_word.py');
+const SPA_CANDIDATE_DIRS = ['public', 'dist'];
 
 const PLAYABLE_WORD_POOLS = {
   live: ['planet', 'orbit', 'echo', 'velocity', 'glide', 'nova', 'flux'],
@@ -278,10 +280,23 @@ async function runPrediction(imageDataUrl) {
   }
 }
 
+function resolveSpaDirectory() {
+  return SPA_CANDIDATE_DIRS.map((dir) => path.join(process.cwd(), dir)).find((dir) =>
+    existsSync(path.join(dir, 'index.html'))
+  );
+}
+
+const spaDirectory = resolveSpaDirectory();
+
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
-app.use(express.static('public'));
 app.use(resolveAuth);
+
+if (spaDirectory) {
+  app.use(express.static(spaDirectory));
+} else {
+  app.use(express.static('public'));
+}
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -480,6 +495,12 @@ app.get('/api/leaderboards/words', (_req, res) => {
 app.use('/api', (_req, res) => {
   sendNotFound(res);
 });
+
+if (spaDirectory) {
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(spaDirectory, 'index.html'));
+  });
+}
 
 app.use((error, _req, res, _next) => {
   sendServerError(res, error);
