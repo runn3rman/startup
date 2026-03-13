@@ -25,7 +25,6 @@ export function Practice({ currentUser }) {
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [typedWord, setTypedWord] = React.useState('');
   const [strokeData, setStrokeData] = React.useState([]);
-  const [imageDataUrl, setImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [isWordsLoading, setIsWordsLoading] = React.useState(false);
@@ -147,9 +146,9 @@ export function Practice({ currentUser }) {
       try {
         setIsSubmitting(true);
         setDefinitionError('');
-        const outcome = await scoringService.predictHandwriting({
+        const outcome = await scoringService.evaluateTypedAttempt({
           targetWord: activeWord.trim(),
-          imageDataUrl,
+          typedWord,
           durationMs: Math.round(elapsedTime * 1000),
           strokePayload: strokeData,
         });
@@ -184,7 +183,7 @@ export function Practice({ currentUser }) {
     return () => {
       cancelled = true;
     };
-  }, [roundPhase, currentUser, navigate, activeWord, elapsedTime, imageDataUrl, strokeData]);
+  }, [roundPhase, currentUser, navigate, activeWord, elapsedTime, typedWord, strokeData]);
 
   React.useEffect(() => {
     if (!result) {
@@ -205,7 +204,6 @@ export function Practice({ currentUser }) {
     setWordsError('');
     setDefinitionError('');
     setStrokeData([]);
-    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setRoundPhase(PRACTICE_PHASES.ACTIVE);
   }
@@ -223,7 +221,6 @@ export function Practice({ currentUser }) {
     }
     setTypedWord('');
     setStrokeData([]);
-    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setResult(null);
   }
@@ -237,7 +234,6 @@ export function Practice({ currentUser }) {
     setElapsedTime(0);
     setTypedWord('');
     setStrokeData([]);
-    setImageDataUrl('');
     setClearSignal((current) => current + 1);
     setResult(null);
     setRoundPhase(PRACTICE_PHASES.IDLE);
@@ -355,7 +351,6 @@ export function Practice({ currentUser }) {
                 height={300}
                 clearSignal={clearSignal}
                 onStrokeDataChange={setStrokeData}
-                onImageDataChange={setImageDataUrl}
               />
               <div className="practice-typing-panel">
                 <label htmlFor="practice-typed-word">Type the word</label>

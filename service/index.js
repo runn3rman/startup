@@ -13,7 +13,7 @@ const app = express();
 const port = process.argv.length > 2 ? Number(process.argv[2]) : 4000;
 const AUTH_COOKIE_NAME = 'token';
 const SALT_ROUNDS = 10;
-const PYTHON_BIN = process.env.PYTHON_BIN || '/usr/local/bin/python3';
+const PYTHON_BIN = process.env.PYTHON_BIN || 'python3';
 const PREDICT_SCRIPT = path.join(process.cwd(), 'model', 'predict_word.py');
 
 const PLAYABLE_WORD_POOLS = {

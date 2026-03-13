@@ -21,7 +21,6 @@ export function Play({ currentUser }) {
   const [wordData, setWordData] = React.useState({ word: '--' });
   const [elapsedTime, setElapsedTime] = React.useState(0);
   const [typedWord, setTypedWord] = React.useState('');
-  const [imageDataUrl, setImageDataUrl] = React.useState('');
   const [clearSignal, setClearSignal] = React.useState(0);
   const [result, setResult] = React.useState(null);
   const [feed, setFeed] = React.useState([]);
@@ -118,9 +117,9 @@ export function Play({ currentUser }) {
         setIsSubmitting(true);
         setRoundError('');
         const targetWord = wordData.word.trim();
-        const outcome = await scoringService.predictHandwriting({
+        const outcome = await scoringService.evaluateTypedAttempt({
           targetWord,
-          imageDataUrl,
+          typedWord,
           durationMs: Math.round(elapsedTime * 1000),
         });
         if (cancelled) {
@@ -154,7 +153,7 @@ export function Play({ currentUser }) {
       cancelled = true;
       setIsSubmitting(false);
     };
-  }, [roundPhase, currentUser, navigate, wordData.word, elapsedTime, imageDataUrl]);
+  }, [roundPhase, currentUser, navigate, wordData.word, elapsedTime, typedWord]);
 
   React.useEffect(() => {
     if (!result) {
@@ -192,7 +191,6 @@ export function Play({ currentUser }) {
 
     setClearSignal((current) => current + 1);
     setTypedWord('');
-    setImageDataUrl('');
     setResult(null);
   }
 
@@ -227,6 +225,10 @@ export function Play({ currentUser }) {
             <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
           </p>
 
+          <p style={{ color: '#b42318', fontWeight: 700 }}>
+            **Writing canvas deep learning prediction works locally, but I need more server space for it to work in the cloud. For now, the game is played by typing**
+          </p>
+
           {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
             <div className="play-input-area">
               <div className="typing-panel">
@@ -246,7 +248,7 @@ export function Play({ currentUser }) {
                   disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}
                 />
               </div>
-              <DrawingPad width={600} height={300} clearSignal={clearSignal} onImageDataChange={setImageDataUrl} />
+              <DrawingPad width={600} height={300} clearSignal={clearSignal} />
             </div>
           ) : (
             <p></p>

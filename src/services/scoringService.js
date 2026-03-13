@@ -1,5 +1,25 @@
 import { apiPost } from './apiClient';
 
+export async function evaluateTypedAttempt({ targetWord, typedWord = '', strokePayload = [], durationMs = 0 }) {
+  const normalizedDuration = Math.max(durationMs, 100);
+  const predictedWord = String(typedWord || '').trim();
+  const strokeCount = strokePayload.length;
+  const pointCount = strokePayload.reduce((sum, stroke) => sum + stroke.points.length, 0);
+  const normalizedTarget = String(targetWord || '').trim();
+
+  return {
+    targetWord: normalizedTarget,
+    predictedWord,
+    isCorrect: predictedWord.toLowerCase() === normalizedTarget.toLowerCase(),
+    strokeCount,
+    pointCount,
+    durationMs: normalizedDuration,
+    timeSeconds: Number((normalizedDuration / 1000).toFixed(1)),
+    predictedAt: new Date().toISOString(),
+    source: 'typed-input',
+  };
+}
+
 export async function predictHandwriting({ targetWord, strokePayload = [], imageDataUrl = '', durationMs = 0 }) {
   const strokeCount = strokePayload.length;
   const pointCount = strokePayload.reduce((sum, stroke) => sum + stroke.points.length, 0);
@@ -33,8 +53,9 @@ export async function predictHandwriting({ targetWord, strokePayload = [], image
 
 export async function scoreAttempt({ expectedWord, strokeCount = 0, durationMs = 8500 }) {
   const fakePayload = [{ id: 'legacy', points: Array.from({ length: strokeCount }, () => ({ x: 0, y: 0, t: 0 })) }];
-  const result = await predictHandwriting({
+  const result = await evaluateTypedAttempt({
     targetWord: expectedWord,
+    typedWord: expectedWord,
     strokePayload: fakePayload,
     durationMs,
   });
