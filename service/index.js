@@ -109,9 +109,60 @@ function clearAuthCookie(res) {
   });
 }
 
+function sendUnauthorized(res) {
+  sendError(res, 401, 'Unauthorized');
+}
+
+function resolveAuth(req, res, next) {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  if (!token) {
+    req.authToken = null;
+    req.authSession = null;
+    req.user = null;
+    next();
+    return;
+  }
+
+  const session = store.sessions.get(token);
+  if (!session) {
+    clearAuthCookie(res);
+    req.authToken = null;
+    req.authSession = null;
+    req.user = null;
+    next();
+    return;
+  }
+
+  const user = store.users.find((item) => item.id === session.userId);
+  if (!user) {
+    store.sessions.delete(token);
+    clearAuthCookie(res);
+    req.authToken = null;
+    req.authSession = null;
+    req.user = null;
+    next();
+    return;
+  }
+
+  req.authToken = token;
+  req.authSession = session;
+  req.user = user;
+  next();
+}
+
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    sendUnauthorized(res);
+    return;
+  }
+
+  next();
+}
+
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.static('public'));
+app.use(resolveAuth);
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -208,38 +259,16 @@ app.post('/api/auth/login', async (req, res, next) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
-  if (token) {
-    store.sessions.delete(token);
+  if (req.authToken) {
+    store.sessions.delete(req.authToken);
   }
 
   clearAuthCookie(res);
   res.json({ ok: true });
 });
 
-app.get('/api/auth/me', (req, res) => {
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
-  if (!token) {
-    sendError(res, 401, 'Unauthorized');
-    return;
-  }
-
-  const session = store.sessions.get(token);
-  if (!session) {
-    clearAuthCookie(res);
-    sendError(res, 401, 'Unauthorized');
-    return;
-  }
-
-  const user = store.users.find((item) => item.id === session.userId);
-  if (!user) {
-    store.sessions.delete(token);
-    clearAuthCookie(res);
-    sendError(res, 401, 'Unauthorized');
-    return;
-  }
-
-  res.json({ user: sanitizeUser(user) });
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ user: sanitizeUser(req.user) });
 });
 
 app.use('/api', (_req, res) => {
