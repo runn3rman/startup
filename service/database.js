@@ -14,6 +14,7 @@ const collections = {
 };
 
 let isConnected = false;
+let indexesEnsured = false;
 
 function loadDatabaseConfig() {
   const configPath = path.join(__dirname, 'dbConfig.json');
@@ -43,8 +44,37 @@ async function connectToDatabase() {
 
   await client.connect();
   await db.command({ ping: 1 });
+  await ensureDatabaseIndexes();
   isConnected = true;
   return { client, db, collections };
+}
+
+async function ensureDatabaseIndexes() {
+  if (indexesEnsured) {
+    return collections;
+  }
+
+  await collections.users.createIndexes([
+    { key: { email: 1 }, name: 'users_email_unique', unique: true },
+    { key: { id: 1 }, name: 'users_id_unique', unique: true },
+  ]);
+
+  await collections.sessions.createIndexes([
+    { key: { token: 1 }, name: 'sessions_token_unique', unique: true },
+    { key: { userId: 1 }, name: 'sessions_userId' },
+  ]);
+
+  await collections.attempts.createIndexes([
+    { key: { id: 1 }, name: 'attempts_id_unique', unique: true },
+    { key: { userId: 1 }, name: 'attempts_userId' },
+    { key: { isCorrect: 1, timeSeconds: 1 }, name: 'attempts_correct_time' },
+    { key: { word: 1 }, name: 'attempts_word' },
+    { key: { player: 1 }, name: 'attempts_player' },
+    { key: { createdAt: 1 }, name: 'attempts_createdAt' },
+  ]);
+
+  indexesEnsured = true;
+  return collections;
 }
 
 module.exports = {
@@ -52,5 +82,6 @@ module.exports = {
   collections,
   connectToDatabase,
   db,
+  ensureDatabaseIndexes,
   mongoUrl,
 };
