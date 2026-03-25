@@ -343,6 +343,9 @@ app.post('/api/auth/register', async (req, res, next) => {
       createdAt: new Date().toISOString(),
     };
 
+    await collections.users.insertOne(user);
+
+    // Temporary mirror until login/session auth reads are moved off in-memory storage.
     store.users.push(user);
 
     const token = uuidv4();
