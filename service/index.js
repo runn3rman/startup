@@ -464,32 +464,36 @@ app.post('/api/predict', async (req, res, next) => {
   }
 });
 
-app.post('/api/attempts', requireAuth, (req, res) => {
-  const payload = req.body || {};
-  const targetWord = String(payload.targetWord || payload.word || '').trim();
+app.post('/api/attempts', requireAuth, async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+    const targetWord = String(payload.targetWord || payload.word || '').trim();
 
-  if (!targetWord) {
-    sendError(res, 400, 'targetWord is required');
-    return;
+    if (!targetWord) {
+      sendError(res, 400, 'targetWord is required');
+      return;
+    }
+
+    const savedAttempt = normalizeAttempt({
+      id: uuidv4(),
+      userId: req.user.id,
+      player: req.user.username,
+      word: targetWord,
+      targetWord,
+      predictedWord: String(payload.predictedWord || '').trim(),
+      isCorrect: payload.isCorrect,
+      accuracy: payload.accuracy,
+      durationMs: payload.durationMs ?? (payload.timeSeconds ? Number(payload.timeSeconds) * 1000 : 0),
+      source: payload.source || 'submitted',
+      createdAt: new Date().toISOString(),
+      date: new Date().toISOString().slice(0, 10),
+    });
+
+    await collections.attempts.insertOne(savedAttempt);
+    res.status(201).json({ attempt: savedAttempt });
+  } catch (error) {
+    next(error);
   }
-
-  const savedAttempt = normalizeAttempt({
-    id: uuidv4(),
-    userId: req.user.id,
-    player: req.user.username,
-    word: targetWord,
-    targetWord,
-    predictedWord: String(payload.predictedWord || '').trim(),
-    isCorrect: payload.isCorrect,
-    accuracy: payload.accuracy,
-    durationMs: payload.durationMs ?? (payload.timeSeconds ? Number(payload.timeSeconds) * 1000 : 0),
-    source: payload.source || 'submitted',
-    createdAt: new Date().toISOString(),
-    date: new Date().toISOString().slice(0, 10),
-  });
-
-  store.attempts.push(savedAttempt);
-  res.status(201).json({ attempt: savedAttempt });
 });
 
 app.get('/api/attempts/me', requireAuth, (req, res) => {
