@@ -18,6 +18,7 @@ const SALT_ROUNDS = 10;
 const PYTHON_BIN = process.env.PYTHON_BIN || 'python3';
 const PREDICT_SCRIPT = path.join(process.cwd(), 'model', 'predict_word.py');
 const SPA_CANDIDATE_DIRS = ['public', 'dist'];
+const rateLimitStore = new Map();
 
 const PLAYABLE_WORD_POOLS = {
   live: ['planet', 'orbit', 'echo', 'velocity', 'glide', 'nova', 'flux'],
@@ -74,9 +75,9 @@ function sendNotFound(res, message = 'Not found') {
 }
 
 function sendServerError(res, error, fallbackMessage = 'Internal server error') {
-  sendError(res, 500, fallbackMessage, {
-    details: error?.message || fallbackMessage,
-  });
+  // eslint-disable-next-line no-console
+  console.error(error);
+  sendError(res, 500, fallbackMessage);
 }
 
 function setAuthCookie(res, token) {
@@ -99,6 +100,28 @@ function clearAuthCookie(res) {
 
 function sendUnauthorized(res) {
   sendError(res, 401, 'Unauthorized');
+}
+
+function createRateLimit({ windowMs, maxRequests, message }) {
+  return (req, res, next) => {
+    const key = `${req.path}:${req.ip}`;
+    const now = Date.now();
+    const current = rateLimitStore.get(key);
+
+    if (!current || now > current.resetAt) {
+      rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+      next();
+      return;
+    }
+
+    if (current.count >= maxRequests) {
+      sendError(res, 429, message);
+      return;
+    }
+
+    current.count += 1;
+    next();
+  };
 }
 
 async function resolveAuth(req, res, next) {
@@ -303,7 +326,10 @@ app.get('/api/health', async (_req, res, next) => {
   }
 });
 
-app.post('/api/auth/register', async (req, res, next) => {
+app.post(
+  '/api/auth/register',
+  createRateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 10, message: 'Too many registration attempts' }),
+  async (req, res, next) => {
   try {
     const { username, email, password } = req.body || {};
     const normalizedUsername = String(username || '').trim();
@@ -347,7 +373,10 @@ app.post('/api/auth/register', async (req, res, next) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res, next) => {
+app.post(
+  '/api/auth/login',
+  createRateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 20, message: 'Too many login attempts' }),
+  async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -428,7 +457,10 @@ app.get('/api/words/practice', (req, res) => {
   });
 });
 
-app.post('/api/predict', async (req, res, next) => {
+app.post(
+  '/api/predict',
+  createRateLimit({ windowMs: 5 * 60 * 1000, maxRequests: 30, message: 'Too many prediction requests' }),
+  async (req, res, next) => {
   try {
     const predictedWord = await runPrediction(req.body?.imageDataUrl);
     res.json({ predictedWord });
@@ -437,7 +469,11 @@ app.post('/api/predict', async (req, res, next) => {
   }
 });
 
-app.post('/api/attempts', requireAuth, async (req, res, next) => {
+app.post(
+  '/api/attempts',
+  requireAuth,
+  createRateLimit({ windowMs: 5 * 60 * 1000, maxRequests: 60, message: 'Too many attempt submissions' }),
+  async (req, res, next) => {
   try {
     const payload = req.body || {};
     const targetWord = String(payload.targetWord || payload.word || '').trim();
