@@ -1,7 +1,26 @@
 .login-page h2 {
+  margin-bottom: 8px;
+}
+
+.login-eyebrow {
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.login-subtitle {
   margin-bottom: 12px;
 }
 
-.login-page form {
+.login-form {
   margin-top: 8px;
+}
+
+.login-form button,
+.login-account-panel button {
+  margin-top: 12px;
+}
+
+.login-helper-link,
+.login-home-link {
+  margin-top: 12px;
 }

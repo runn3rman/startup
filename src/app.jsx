@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
 import { Home } from './home/home';
@@ -70,18 +70,22 @@ export default function App() {
           <NavLink className="nav-link" to="/">
             Home
           </NavLink>
-          <NavLink className="nav-link" to="/play">
-            Play
-          </NavLink>
-          <NavLink className="nav-link" to="/practice">
-            Practice
-          </NavLink>
-          <NavLink className="nav-link" to="/scores">
-            Scores
-          </NavLink>
-          <NavLink className="nav-link" to="/leaderboards">
-            Leaderboards
-          </NavLink>
+          {currentUser ? (
+            <>
+              <NavLink className="nav-link" to="/play">
+                Play
+              </NavLink>
+              <NavLink className="nav-link" to="/practice">
+                Practice
+              </NavLink>
+              <NavLink className="nav-link" to="/scores">
+                Scores
+              </NavLink>
+              <NavLink className="nav-link" to="/leaderboards">
+                Leaderboards
+              </NavLink>
+            </>
+          ) : null}
           <NavLink className="nav-link" to="/about">
             About
           </NavLink>
@@ -102,15 +106,49 @@ export default function App() {
               </main>
             }
           />
-          <Route path="/play" element={<Play currentUser={currentUser} />} />
-          <Route path="/practice" element={<Practice currentUser={currentUser} />} />
-          <Route path="/scores" element={<Scores currentUser={currentUser} />} />
-          <Route path="/leaderboards" element={<Leaderboards />} />
+          <Route path="/play" element={<ProtectedRoute currentUser={currentUser}><Play currentUser={currentUser} /></ProtectedRoute>} />
+          <Route
+            path="/practice"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Practice currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scores"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Scores currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leaderboards"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Leaderboards />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/about" element={<About />} />
           <Route
             path="/login"
             element={
               <Login
+                mode="login"
+                currentUser={currentUser}
+                setCurrentUser={setCurrentUser}
+                setAuthToken={setAuthToken}
+                authToken={authToken}
+              />
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <Login
+                mode="register"
                 currentUser={currentUser}
                 setCurrentUser={setCurrentUser}
                 setAuthToken={setAuthToken}
@@ -127,6 +165,14 @@ export default function App() {
       </div>
     </BrowserRouter>
   );
+}
+
+function ProtectedRoute({ currentUser, children }) {
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }
 
 function NotFound() {
