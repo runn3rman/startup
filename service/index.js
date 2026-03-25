@@ -349,11 +349,16 @@ app.post('/api/auth/register', async (req, res, next) => {
     store.users.push(user);
 
     const token = uuidv4();
-    store.sessions.set(token, {
+    const session = {
       token,
       userId: user.id,
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    await collections.sessions.insertOne(session);
+
+    // Temporary mirror until auth/session reads are moved off in-memory storage.
+    store.sessions.set(token, session);
 
     setAuthCookie(res, token);
     res.status(201).json({ user: sanitizeUser(user) });
@@ -385,11 +390,16 @@ app.post('/api/auth/login', async (req, res, next) => {
     }
 
     const token = uuidv4();
-    store.sessions.set(token, {
+    const session = {
       token,
       userId: user.id,
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    await collections.sessions.insertOne(session);
+
+    // Temporary mirror until auth/session reads are moved off in-memory storage.
+    store.sessions.set(token, session);
 
     setAuthCookie(res, token);
     res.json({ user: sanitizeUser(user) });
