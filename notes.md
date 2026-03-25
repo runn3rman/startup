@@ -78,3 +78,9 @@ Handling the toggling of the checkboxes was particularly interesting.
 ## DB
 
 using mongodb
+
+Moved users, sessions, and attempts into MongoDB instead of keeping them in memory.
+
+The main thing to watch was doing the auth migration in the right order. If I changed writes before reads, login/session auth could break for a bit.
+
+Also nice to have the DB ping and index creation happen on startup so bad config fails fast instead of making bugs later.
