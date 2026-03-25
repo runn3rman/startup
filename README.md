@@ -155,7 +155,7 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 - Prediction endpoint: `POST /api/predict`
 - Attempt/leaderboard endpoints: `POST /api/attempts`, `GET /api/attempts/me`, `GET /api/leaderboards/global`, `GET /api/leaderboards/friends`, `GET /api/leaderboards/words`
 - Restricted endpoints: `POST /api/attempts` and `GET /api/attempts/me` require a valid auth cookie
-- Current storage mode: in-memory only, so users, sessions, and attempts reset when the backend restarts
+- Current storage mode: MongoDB for users, sessions, and attempts
 - Third-party definition fetch: Merriam-Webster key stored in `.env.local` as `VITE_MERRIAM_WEBSTER_KEY`
 
 ### Local Run
@@ -173,14 +173,20 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 - Confirmed the frontend now loads sessions from `GET /api/auth/me` instead of localStorage
 - Confirmed gameplay/practice now use backend word and prediction endpoints plus backend attempt submission
 - Confirmed practice definitions now come from Merriam-Webster in the browser
-- Temporary limitation: all backend data is in memory for this phase, so restarting the service clears users, sessions, and attempts
+- Backend data now persists in MongoDB across service restarts
 
 ## 🚀 DB deliverable
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Stores data in MongoDB** - I did not complete this part of the deliverable.
-- [ ] **Stores credentials in MongoDB** - I did not complete this part of the deliverable.
+- [x] **Stores data in MongoDB** - Moved gameplay attempts and leaderboard-backed data into MongoDB collections and updated the service endpoints to read/write persisted data instead of in-memory arrays.
+- [x] **Stores credentials in MongoDB** - Moved registered users and login sessions into MongoDB, kept password hashing with `bcryptjs`, and made cookie-based auth resolve against stored session/user records.
+
+### DB Notes
+
+- Mongo setup lives in `service/database.js`
+- Collections: `users`, `sessions`, `attempts`
+- Startup now pings MongoDB, creates indexes, and seeds the starter leaderboard attempts only if the attempts collection is empty
 
 ## 🚀 WebSocket deliverable
 
