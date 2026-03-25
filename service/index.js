@@ -194,15 +194,15 @@ function rankAttempts(attempts, limit) {
   return typeof limit === 'number' ? ranked.slice(0, limit) : ranked;
 }
 
-function getFriendsAttempts() {
+function getFriendsAttempts(attempts) {
   const friendNames = new Set(['Grant', 'Sky', 'Mia']);
-  return store.attempts.filter((attempt) => friendNames.has(attempt.player));
+  return attempts.filter((attempt) => friendNames.has(attempt.player));
 }
 
-function getBestAttemptsByWord() {
+function getBestAttemptsByWord(attempts) {
   const bestMap = new Map();
 
-  store.attempts
+  attempts
     .filter((attempt) => attempt.isCorrect)
     .forEach((attempt) => {
       const current = bestMap.get(attempt.word);
@@ -516,16 +516,41 @@ app.get('/api/attempts/me', requireAuth, async (req, res, next) => {
   }
 });
 
-app.get('/api/leaderboards/global', (_req, res) => {
-  res.json(rankAttempts(store.attempts, 10));
+app.get('/api/leaderboards/global', async (_req, res, next) => {
+  try {
+    const attempts = await collections.attempts
+      .find({ isCorrect: true })
+      .sort({ timeSeconds: 1 })
+      .limit(10)
+      .toArray();
+
+    res.json(rankAttempts(attempts, 10));
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.get('/api/leaderboards/friends', (_req, res) => {
-  res.json(rankAttempts(getFriendsAttempts(), 10));
+app.get('/api/leaderboards/friends', async (_req, res, next) => {
+  try {
+    const attempts = await collections.attempts
+      .find({ isCorrect: true, player: { $in: ['Grant', 'Sky', 'Mia'] } })
+      .sort({ timeSeconds: 1 })
+      .limit(10)
+      .toArray();
+
+    res.json(rankAttempts(getFriendsAttempts(attempts), 10));
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.get('/api/leaderboards/words', (_req, res) => {
-  res.json(getBestAttemptsByWord());
+app.get('/api/leaderboards/words', async (_req, res, next) => {
+  try {
+    const attempts = await collections.attempts.find({ isCorrect: true }).toArray();
+    res.json(getBestAttemptsByWord(attempts));
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use('/api', (_req, res) => {
