@@ -8,6 +8,7 @@ const { promisify } = require('util');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
+const { connectToDatabase, db, collections } = require('./database');
 
 const execFileAsync = promisify(execFile);
 const app = express();
@@ -77,6 +78,8 @@ app.locals.store = store;
 app.locals.models = {
   normalizeAttempt,
 };
+app.locals.db = db;
+app.locals.collections = collections;
 
 function sanitizeUser(user) {
   return {
@@ -506,7 +509,20 @@ app.use((error, _req, res, _next) => {
   sendServerError(res, error);
 });
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Service listening on http://localhost:${port}`);
-});
+async function start() {
+  try {
+    await connectToDatabase();
+    // eslint-disable-next-line no-console
+    console.log('DB connected');
+    app.listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`Service listening on http://localhost:${port}`);
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`Connection failed to MongoDB because ${error.message}`);
+    process.exit(1);
+  }
+}
+
+start();
