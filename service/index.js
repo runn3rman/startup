@@ -412,13 +412,17 @@ app.post('/api/auth/login', async (req, res, next) => {
   }
 });
 
-app.post('/api/auth/logout', (req, res) => {
-  if (req.authToken) {
-    store.sessions.delete(req.authToken);
-  }
+app.post('/api/auth/logout', async (req, res, next) => {
+  try {
+    if (req.authToken) {
+      await collections.sessions.deleteOne({ token: req.authToken });
+    }
 
-  clearAuthCookie(res);
-  res.json({ ok: true });
+    clearAuthCookie(res);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
