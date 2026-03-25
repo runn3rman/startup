@@ -126,41 +126,45 @@ function sendUnauthorized(res) {
   sendError(res, 401, 'Unauthorized');
 }
 
-function resolveAuth(req, res, next) {
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
-  if (!token) {
-    req.authToken = null;
-    req.authSession = null;
-    req.user = null;
-    next();
-    return;
-  }
+async function resolveAuth(req, res, next) {
+  try {
+    const token = req.cookies?.[AUTH_COOKIE_NAME];
+    if (!token) {
+      req.authToken = null;
+      req.authSession = null;
+      req.user = null;
+      next();
+      return;
+    }
 
-  const session = store.sessions.get(token);
-  if (!session) {
-    clearAuthCookie(res);
-    req.authToken = null;
-    req.authSession = null;
-    req.user = null;
-    next();
-    return;
-  }
+    const session = await collections.sessions.findOne({ token });
+    if (!session) {
+      clearAuthCookie(res);
+      req.authToken = null;
+      req.authSession = null;
+      req.user = null;
+      next();
+      return;
+    }
 
-  const user = store.users.find((item) => item.id === session.userId);
-  if (!user) {
-    store.sessions.delete(token);
-    clearAuthCookie(res);
-    req.authToken = null;
-    req.authSession = null;
-    req.user = null;
-    next();
-    return;
-  }
+    const user = await collections.users.findOne({ id: session.userId });
+    if (!user) {
+      await collections.sessions.deleteOne({ token });
+      clearAuthCookie(res);
+      req.authToken = null;
+      req.authSession = null;
+      req.user = null;
+      next();
+      return;
+    }
 
-  req.authToken = token;
-  req.authSession = session;
-  req.user = user;
-  next();
+    req.authToken = token;
+    req.authSession = session;
+    req.user = user;
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 function requireAuth(req, res, next) {
