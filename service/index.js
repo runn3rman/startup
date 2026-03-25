@@ -496,16 +496,24 @@ app.post('/api/attempts', requireAuth, async (req, res, next) => {
   }
 });
 
-app.get('/api/attempts/me', requireAuth, (req, res) => {
-  const attempts = getAttemptsByUser(req.user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const bestScores = rankAttempts(attempts, 10);
-  const byWord = summarizeAttemptsByWord(attempts);
+app.get('/api/attempts/me', requireAuth, async (req, res, next) => {
+  try {
+    const attempts = await collections.attempts
+      .find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .toArray();
 
-  res.json({
-    attempts,
-    bestScores,
-    byWord,
-  });
+    const bestScores = rankAttempts(attempts, 10);
+    const byWord = summarizeAttemptsByWord(attempts);
+
+    res.json({
+      attempts,
+      bestScores,
+      byWord,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get('/api/leaderboards/global', (_req, res) => {
