@@ -50,31 +50,6 @@ function normalizeAttempt(item) {
   };
 }
 
-const seedAttempts = [
-  { id: 'a1', player: 'Avery', word: 'velocity', isCorrect: true, timeSeconds: 6.2, date: '2026-01-20' },
-  { id: 'a2', player: 'Jay', word: 'orbit', isCorrect: true, timeSeconds: 6.7, date: '2026-01-19' },
-  { id: 'a3', player: 'Grant', word: 'echo', isCorrect: true, timeSeconds: 6.9, date: '2026-01-18' },
-  { id: 'a4', player: 'Sky', word: 'glide', isCorrect: true, timeSeconds: 7.1, date: '2026-01-22' },
-  { id: 'a5', player: 'Mia', word: 'nova', isCorrect: true, timeSeconds: 7.6, date: '2026-01-20' },
-].map(normalizeAttempt);
-
-// This service currently stores everything in memory. Restarting the process resets all data.
-const store = {
-  users: [],
-  sessions: new Map(),
-  attempts: [...seedAttempts],
-  leaderboardSeed: [...seedAttempts],
-  wordPools: {
-    live: [...PLAYABLE_WORD_POOLS.live],
-    practice: {
-      easy: [...PLAYABLE_WORD_POOLS.practice.easy],
-      medium: [...PLAYABLE_WORD_POOLS.practice.medium],
-      hard: [...PLAYABLE_WORD_POOLS.practice.hard],
-    },
-  },
-};
-
-app.locals.store = store;
 app.locals.models = {
   normalizeAttempt,
 };
@@ -214,10 +189,6 @@ function getBestAttemptsByWord(attempts) {
   return rankAttempts(Array.from(bestMap.values()));
 }
 
-function getAttemptsByUser(userId) {
-  return store.attempts.filter((attempt) => attempt.userId === userId);
-}
-
 function summarizeAttemptsByWord(attempts) {
   const byWordMap = new Map();
 
@@ -305,20 +276,31 @@ if (spaDirectory) {
   app.use(express.static('public'));
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({
-    ok: true,
-    service: 'inkspace-service',
-    storage: {
-      mode: 'in-memory',
-      resetsOnRestart: true,
-      counts: {
-        users: store.users.length,
-        sessions: store.sessions.size,
-        attempts: store.attempts.length,
+app.get('/api/health', async (_req, res, next) => {
+  try {
+    const [users, sessions, attempts] = await Promise.all([
+      collections.users.countDocuments(),
+      collections.sessions.countDocuments(),
+      collections.attempts.countDocuments(),
+    ]);
+
+    res.json({
+      ok: true,
+      service: 'inkspace-service',
+      storage: {
+        mode: 'mongodb',
+        database: db.databaseName,
+        resetsOnRestart: false,
+        counts: {
+          users,
+          sessions,
+          attempts,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post('/api/auth/register', async (req, res, next) => {
@@ -349,9 +331,6 @@ app.post('/api/auth/register', async (req, res, next) => {
 
     await collections.users.insertOne(user);
 
-    // Temporary mirror until login/session auth reads are moved off in-memory storage.
-    store.users.push(user);
-
     const token = uuidv4();
     const session = {
       token,
@@ -360,9 +339,6 @@ app.post('/api/auth/register', async (req, res, next) => {
     };
 
     await collections.sessions.insertOne(session);
-
-    // Temporary mirror until auth/session reads are moved off in-memory storage.
-    store.sessions.set(token, session);
 
     setAuthCookie(res, token);
     res.status(201).json({ user: sanitizeUser(user) });
@@ -381,7 +357,7 @@ app.post('/api/auth/login', async (req, res, next) => {
       return;
     }
 
-    const user = store.users.find((item) => item.email === normalizedEmail);
+    const user = await collections.users.findOne({ email: normalizedEmail });
     if (!user) {
       sendError(res, 401, 'Invalid credentials');
       return;
@@ -401,9 +377,6 @@ app.post('/api/auth/login', async (req, res, next) => {
     };
 
     await collections.sessions.insertOne(session);
-
-    // Temporary mirror until auth/session reads are moved off in-memory storage.
-    store.sessions.set(token, session);
 
     setAuthCookie(res, token);
     res.json({ user: sanitizeUser(user) });
@@ -430,7 +403,7 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 });
 
 app.get('/api/words/next', (_req, res) => {
-  const word = pickRandomWord(store.wordPools.live);
+  const word = pickRandomWord(PLAYABLE_WORD_POOLS.live);
   if (!word) {
     sendError(res, 500, 'No live words available');
     return;
@@ -445,8 +418,8 @@ app.get('/api/words/next', (_req, res) => {
 
 app.get('/api/words/practice', (req, res) => {
   const requestedLevel = String(req.query.level || 'easy').toLowerCase();
-  const resolvedLevel = store.wordPools.practice[requestedLevel] ? requestedLevel : 'easy';
-  const words = store.wordPools.practice[resolvedLevel];
+  const resolvedLevel = PLAYABLE_WORD_POOLS.practice[requestedLevel] ? requestedLevel : 'easy';
+  const words = PLAYABLE_WORD_POOLS.practice[resolvedLevel];
 
   res.json({
     level: resolvedLevel,
