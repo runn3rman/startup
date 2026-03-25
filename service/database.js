@@ -13,6 +13,14 @@ const collections = {
   attempts: db.collection('attempts'),
 };
 
+const seedAttempts = [
+  buildSeedAttempt({ id: 'a1', player: 'Avery', word: 'velocity', timeSeconds: 6.2, date: '2026-01-20' }),
+  buildSeedAttempt({ id: 'a2', player: 'Jay', word: 'orbit', timeSeconds: 6.7, date: '2026-01-19' }),
+  buildSeedAttempt({ id: 'a3', player: 'Grant', word: 'echo', timeSeconds: 6.9, date: '2026-01-18' }),
+  buildSeedAttempt({ id: 'a4', player: 'Sky', word: 'glide', timeSeconds: 7.1, date: '2026-01-22' }),
+  buildSeedAttempt({ id: 'a5', player: 'Mia', word: 'nova', timeSeconds: 7.6, date: '2026-01-20' }),
+];
+
 let isConnected = false;
 let indexesEnsured = false;
 
@@ -37,6 +45,26 @@ function buildMongoUrl(dbConfig) {
   return `mongodb+srv://${dbConfig.userName}:${dbConfig.password}@${dbConfig.hostname}`;
 }
 
+function buildSeedAttempt({ id, player, word, timeSeconds, date }) {
+  const durationMs = Math.round(Number(timeSeconds) * 1000);
+
+  return {
+    id,
+    userId: null,
+    player,
+    word,
+    targetWord: word,
+    predictedWord: '',
+    isCorrect: true,
+    accuracy: 100,
+    durationMs,
+    timeSeconds: Number(timeSeconds),
+    source: 'seed',
+    createdAt: `${date}T00:00:00.000Z`,
+    date,
+  };
+}
+
 async function connectToDatabase() {
   if (isConnected) {
     return { client, db, collections };
@@ -45,6 +73,7 @@ async function connectToDatabase() {
   await client.connect();
   await db.command({ ping: 1 });
   await ensureDatabaseIndexes();
+  await seedDatabase();
   isConnected = true;
   return { client, db, collections };
 }
@@ -77,6 +106,16 @@ async function ensureDatabaseIndexes() {
   return collections;
 }
 
+async function seedDatabase() {
+  const attemptCount = await collections.attempts.countDocuments({}, { limit: 1 });
+  if (attemptCount > 0) {
+    return collections;
+  }
+
+  await collections.attempts.insertMany(seedAttempts);
+  return collections;
+}
+
 module.exports = {
   client,
   collections,
@@ -84,4 +123,5 @@ module.exports = {
   db,
   ensureDatabaseIndexes,
   mongoUrl,
+  seedDatabase,
 };
