@@ -328,7 +328,7 @@ app.post('/api/auth/register', async (req, res, next) => {
       return;
     }
 
-    const existingUser = store.users.find((user) => user.email === normalizedEmail);
+    const existingUser = await collections.users.findOne({ email: normalizedEmail });
     if (existingUser) {
       sendError(res, 409, 'Email already registered');
       return;
