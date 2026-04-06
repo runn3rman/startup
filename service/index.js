@@ -5,6 +5,7 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const { promisify } = require('util');
+const { WebSocketServer } = require('ws');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
@@ -288,6 +289,27 @@ function resolveSpaDirectory() {
 }
 
 const spaDirectory = resolveSpaDirectory();
+
+function configureWebSocketServer(server) {
+  const socketServer = new WebSocketServer({ server, path: '/ws' });
+
+  socketServer.on('connection', (socket, request) => {
+    // eslint-disable-next-line no-console
+    console.log(`WebSocket connected from ${request.socket.remoteAddress || 'unknown-address'}`);
+
+    socket.on('close', () => {
+      // eslint-disable-next-line no-console
+      console.log('WebSocket disconnected');
+    });
+
+    socket.on('error', (error) => {
+      // eslint-disable-next-line no-console
+      console.error('WebSocket error', error);
+    });
+  });
+
+  return socketServer;
+}
 
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
@@ -581,10 +603,11 @@ async function start() {
     await connectToDatabase();
     // eslint-disable-next-line no-console
     console.log('DB connected');
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Service listening on http://localhost:${port}`);
     });
+    configureWebSocketServer(server);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Connection failed to MongoDB because ${error.message}`);
