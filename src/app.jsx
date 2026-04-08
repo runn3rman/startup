@@ -9,12 +9,13 @@ import { About } from './about/about';
 import { Practice } from './practice/practice';
 import { Leaderboards } from './leaderboards/leaderboards';
 import { Login } from './login/login';
-import { authService } from './services';
+import { authService, liveEventsService } from './services';
 
 export default function App() {
   const [currentUser, setCurrentUser] = React.useState(null);
   const [authToken, setAuthToken] = React.useState('');
   const [isSessionLoading, setIsSessionLoading] = React.useState(true);
+  const [liveEventsClient] = React.useState(() => liveEventsService.getLiveEventsClient());
 
   React.useEffect(() => {
     let cancelled = false;
@@ -106,7 +107,14 @@ export default function App() {
               </main>
             }
           />
-          <Route path="/play" element={<ProtectedRoute currentUser={currentUser}><Play currentUser={currentUser} /></ProtectedRoute>} />
+          <Route
+            path="/play"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Play currentUser={currentUser} liveEventsClient={liveEventsClient} />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/practice"
             element={
