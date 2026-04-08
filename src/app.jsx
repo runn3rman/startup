@@ -135,7 +135,7 @@ export default function App() {
             path="/leaderboards"
             element={
               <ProtectedRoute currentUser={currentUser}>
-                <Leaderboards />
+                <Leaderboards liveEventsClient={liveEventsClient} />
               </ProtectedRoute>
             }
           />

@@ -2,7 +2,12 @@ import React from 'react';
 import '../scores/scores.css';
 import { leaderboardService } from '../services';
 
-export function Leaderboards() {
+const SOCKET_EVENT_TYPES = {
+  ATTEMPT_SAVED: 'attempt/saved',
+  RECORD_NEW: 'record/new',
+};
+
+export function Leaderboards({ liveEventsClient }) {
   const [globalTop, setGlobalTop] = React.useState([]);
   const [friendsTop, setFriendsTop] = React.useState([]);
   const [bestByWord, setBestByWord] = React.useState([]);
@@ -34,6 +39,22 @@ export function Leaderboards() {
   React.useEffect(() => {
     load();
   }, []);
+
+  React.useEffect(() => {
+    if (!liveEventsClient) {
+      return;
+    }
+
+    const unsubscribe = liveEventsClient.subscribe((event) => {
+      if (event.type !== SOCKET_EVENT_TYPES.ATTEMPT_SAVED && event.type !== SOCKET_EVENT_TYPES.RECORD_NEW) {
+        return;
+      }
+
+      load();
+    });
+
+    return () => unsubscribe();
+  }, [liveEventsClient]);
 
   return (
     <main className="scores-page">
