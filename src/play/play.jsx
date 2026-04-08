@@ -174,9 +174,17 @@ export function Play({ currentUser, liveEventsClient }) {
           return;
         }
 
-        setResult(outcome);
+        const savedOutcome = {
+          ...outcome,
+          player: currentUser.username,
+          word: targetWord,
+          targetWord,
+          source: 'live-play',
+        };
+
+        setResult(savedOutcome);
         try {
-          await leaderboardService.addAttempt(outcome);
+          await leaderboardService.addAttempt(savedOutcome);
         } catch (error) {
           if (!cancelled) {
             setRoundError(error.message || 'Failed to save attempt');
@@ -274,7 +282,7 @@ export function Play({ currentUser, liveEventsClient }) {
           </p>
 
           <p style={{ color: '#b42318', fontWeight: 700 }}>
-            **Writing canvas deep learning prediction works locally, but I need more server space for it to work in the cloud. For now, the game is played by typing**
+            Cloud play currently uses typed input, and each saved attempt is pushed to the live feed over WebSocket.
           </p>
 
           {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
