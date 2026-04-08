@@ -84,3 +84,20 @@ Moved users, sessions, and attempts into MongoDB instead of keeping them in memo
 The main thing to watch was doing the auth migration in the right order. If I changed writes before reads, login/session auth could break for a bit.
 
 Also nice to have the DB ping and index creation happen on startup so bad config fails fast instead of making bugs later.
+
+## WebSocket
+
+Kept this one simple by attaching `ws` to the existing Express server instead of creating a second backend service or port.
+
+The cleanest shape was:
+
+- save attempts with the existing HTTP `POST /api/attempts`
+- broadcast only after the DB write succeeds
+- keep one socket path: `/ws`
+- keep one message envelope: `{ type, payload }`
+
+The browser side was easiest once I used one shared WebSocket client at the app level instead of opening a new socket inside each page.
+
+For local dev, Vite needs to proxy both `/api` and `/ws` to `http://127.0.0.1:4000` or the frontend and backend do not behave like production.
+
+The ping/pong heartbeat is worth keeping because dead sockets otherwise stick around longer than you expect during testing.

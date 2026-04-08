@@ -9,6 +9,13 @@ export function Home() {
           Ink is a speed handwriting game where you race friends to write words fast and correctly. Your best times
           will help you climb the global leaderboard.
         </p>
+        <p>
+          Built by <strong>Grant Gardner</strong>. View the source on{' '}
+          <a href="https://github.com/runn3rman/startup" rel="noopener noreferrer">
+            GitHub
+          </a>
+          .
+        </p>
         <img src="/images/ink-logo.svg" alt="Ink logo mock with an ink droplet" />
       </section>
 

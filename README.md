@@ -192,8 +192,18 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Backend listens for WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Frontend makes WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Data sent over WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **WebSocket data displayed** - I did not complete this part of the deliverable.
-- [ ] **Application is fully functional** - I did not complete this part of the deliverable.
+- [x] **Backend listens for WebSocket connection** - Added a `WebSocketServer` to the existing Express backend in `service/index.js`, serving the `/ws` path on the same backend port and keeping connections alive with a ping/pong heartbeat.
+- [x] **Frontend makes WebSocket connection** - Replaced the mock live events service with a real browser WebSocket client in `src/services/liveEventsService.js` and created one shared client at the app level in `src/app.jsx`.
+- [x] **Data sent over WebSocket connection** - After a successful `POST /api/attempts`, the backend now broadcasts an `attempt/saved` event using one JSON envelope with `type` and `payload`.
+- [x] **WebSocket data displayed** - The `Play` page live feed now subscribes to real socket events and shows connection status plus saved attempt messages from other clients.
+- [x] **Application is fully functional** - Play and Practice both save real attempts over HTTP, those saved attempts are pushed over WebSocket, and the Leaderboards page refreshes when live attempt events arrive.
+
+### WebSocket Notes
+
+- Home page prerequisite: `src/home/home.jsx` now shows my name and a direct GitHub repo link on the home page.
+- Backend socket path: `/ws`
+- Backend socket code: `service/index.js`
+- Frontend socket client: `src/services/liveEventsService.js`
+- Live feed UI: `src/play/play.jsx`
+- Leaderboard live refresh: `src/leaderboards/leaderboards.jsx`
+- Dev proxy: `vite.config.js` proxies both `/api` and `/ws` to `http://127.0.0.1:4000`
