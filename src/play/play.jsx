@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
 import { leaderboardService, scoringService, wordService } from '../services';
-import { DrawingPad } from '../components/DrawingPad';
 
 const ROUND_PHASES = {
   IDLE: 'idle',
@@ -261,7 +260,6 @@ export function Play({ currentUser, liveEventsClient }) {
 
   return (
     <main className="play-page">
-      <h2>Game</h2>
       <div className="play-layout">
         <section className="play-main">
           <div className="play-word-wrap">
@@ -279,10 +277,6 @@ export function Play({ currentUser, liveEventsClient }) {
 
           <p className={timerBeat && roundPhase === ROUND_PHASES.ACTIVE ? 'play-timer-beat' : ''}>
             <strong>Time:</strong> {elapsedTime.toFixed(1)}s / {MAX_ROUND_SECONDS.toFixed(1)}s
-          </p>
-
-          <p style={{ color: '#b42318', fontWeight: 700 }}>
-            Cloud play currently uses typed input, and each saved attempt is pushed to the live feed over WebSocket.
           </p>
 
           {roundPhase === ROUND_PHASES.ACTIVE || roundPhase === ROUND_PHASES.SUBMITTED || roundPhase === ROUND_PHASES.RESULT ? (
@@ -304,7 +298,6 @@ export function Play({ currentUser, liveEventsClient }) {
                   disabled={roundPhase !== ROUND_PHASES.ACTIVE || isSubmitting}
                 />
               </div>
-              <DrawingPad width={600} height={300} clearSignal={clearSignal} />
             </div>
           ) : (
             <p></p>

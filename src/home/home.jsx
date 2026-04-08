@@ -33,8 +33,8 @@ export function Home() {
       <section>
         <h2>How it works</h2>
         <ol>
-          <li>Write a word on the canvas</li>
-          <li>The model checks if the word is correct</li>
+          <li>Start a round and type the target word as fast as you can</li>
+          <li>The app checks if the word is correct</li>
           <li>Results show up on the leaderboard</li>
         </ol>
       </section>

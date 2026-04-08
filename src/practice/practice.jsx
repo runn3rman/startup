@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { leaderboardService, scoringService, wordService } from '../services';
-import { DrawingPad } from '../components/DrawingPad';
 import './practice.css';
 
 const PRACTICE_PHASES = {
@@ -355,12 +354,6 @@ export function Practice({ currentUser }) {
         <div className="practice-right">
           <section className={resultFlash ? 'practice-result-flash' : ''}>
             <div className="practice-input-area">
-              <DrawingPad
-                width={600}
-                height={300}
-                clearSignal={clearSignal}
-                onStrokeDataChange={setStrokeData}
-              />
               <div className="practice-typing-panel">
                 <label htmlFor="practice-typed-word">Type the word</label>
                 <input
