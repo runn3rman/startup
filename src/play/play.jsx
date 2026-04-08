@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './play.css';
-import { leaderboardService, liveEventsService, scoringService, wordService } from '../services';
+import { leaderboardService, scoringService, wordService } from '../services';
 import { DrawingPad } from '../components/DrawingPad';
 
 const ROUND_PHASES = {
@@ -14,7 +14,46 @@ const ROUND_PHASES = {
 
 const MAX_ROUND_SECONDS = 10;
 
-export function Play({ currentUser }) {
+const SOCKET_EVENT_TYPES = {
+  OPEN: 'socket/open',
+  CLOSE: 'socket/close',
+  ATTEMPT_SAVED: 'attempt/saved',
+  RECORD_NEW: 'record/new',
+};
+
+function formatFeedEvent(event) {
+  if (event.type === SOCKET_EVENT_TYPES.OPEN) {
+    return {
+      id: `socket-open-${event.payload.connectedAt}`,
+      message: 'Live feed connected',
+    };
+  }
+
+  if (event.type === SOCKET_EVENT_TYPES.CLOSE) {
+    return {
+      id: `socket-close-${event.payload.disconnectedAt}`,
+      message: 'Live feed disconnected',
+    };
+  }
+
+  if (event.type === SOCKET_EVENT_TYPES.RECORD_NEW) {
+    return {
+      id: event.payload.id,
+      message: `${event.payload.player} set a new record on "${event.payload.word}" at ${event.payload.timeSeconds}s`,
+    };
+  }
+
+  if (event.type === SOCKET_EVENT_TYPES.ATTEMPT_SAVED) {
+    return {
+      id: event.payload.id,
+      message: `${event.payload.player} finished "${event.payload.word}" in ${event.payload.timeSeconds}s (${event.payload.isCorrect ? 'correct' : 'incorrect'})`,
+    };
+  }
+
+  return null;
+}
+
+export function Play({ currentUser, liveEventsClient }) {
   const navigate = useNavigate();
   const typedInputRef = React.useRef(null);
   const [roundPhase, setRoundPhase] = React.useState(ROUND_PHASES.IDLE);
@@ -92,12 +131,21 @@ export function Play({ currentUser }) {
   }, [roundPhase]);
 
   React.useEffect(() => {
-    const unsubscribe = liveEventsService.subscribeToLiveEvents((event) => {
-      setFeed((current) => [event, ...current].slice(0, 6));
+    if (!liveEventsClient) {
+      return;
+    }
+
+    const unsubscribe = liveEventsClient.subscribe((event) => {
+      const feedEvent = formatFeedEvent(event);
+      if (!feedEvent) {
+        return;
+      }
+
+      setFeed((current) => [feedEvent, ...current].slice(0, 6));
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [liveEventsClient]);
 
   React.useEffect(() => {
     if (roundPhase !== ROUND_PHASES.SUBMITTED) {
@@ -284,15 +332,11 @@ export function Play({ currentUser }) {
           {feed.length > 0 ? (
             <ul>
               {feed.map((event) => (
-                <li key={event.id}>
-                  {event.type === 'newRecord'
-                    ? `${event.player} set a new record on "${event.word}" at ${event.timeSeconds}s`
-                    : `${event.player} finished "${event.word}" in ${event.timeSeconds}s (${event.isCorrect ? 'correct' : 'incorrect'})`}
-                </li>
+                <li key={event.id}>{event.message}</li>
               ))}
             </ul>
           ) : null}
-          <p>Mock source: setInterval</p>
+          <p>Source: WebSocket</p>
         </section>
       </div>
       <p>
