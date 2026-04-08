@@ -81,12 +81,27 @@ function createAttemptEventPayload(attempt) {
   };
 }
 
+function broadcastSocketEvent(socketServer, type, payload) {
+  if (!socketServer) {
+    return;
+  }
+
+  const message = createSocketEvent(type, payload);
+
+  socketServer.clients.forEach((client) => {
+    if (client.readyState === client.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
 app.locals.models = {
   normalizeAttempt,
   createAttemptEventPayload,
 };
 app.locals.db = db;
 app.locals.collections = collections;
+app.locals.socketServer = null;
 
 function sanitizeUser(user) {
   return {
@@ -368,6 +383,7 @@ function configureWebSocketServer(server) {
     clearInterval(heartbeatInterval);
   });
 
+  app.locals.socketServer = socketServer;
   return socketServer;
 }
 
@@ -581,6 +597,11 @@ app.post(
     });
 
     await collections.attempts.insertOne(savedAttempt);
+    broadcastSocketEvent(
+      app.locals.socketServer,
+      SOCKET_EVENT_TYPES.ATTEMPT_SAVED,
+      createAttemptEventPayload(savedAttempt)
+    );
     res.status(201).json({ attempt: savedAttempt });
   } catch (error) {
     next(error);
