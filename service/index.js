@@ -30,6 +30,13 @@ const PLAYABLE_WORD_POOLS = {
   },
 };
 
+const SOCKET_EVENT_TYPES = {
+  OPEN: 'socket/open',
+  CLOSE: 'socket/close',
+  ATTEMPT_SAVED: 'attempt/saved',
+  RECORD_NEW: 'record/new',
+};
+
 function normalizeAttempt(item) {
   const durationMs = Number(item.durationMs ?? (item.timeSeconds || 0) * 1000);
   const timeSeconds = Number((durationMs / 1000).toFixed(1));
@@ -52,8 +59,31 @@ function normalizeAttempt(item) {
   };
 }
 
+function createSocketEvent(type, payload = {}) {
+  return JSON.stringify({
+    type,
+    payload,
+  });
+}
+
+function createAttemptEventPayload(attempt) {
+  return {
+    id: attempt.id,
+    player: attempt.player,
+    word: attempt.word,
+    targetWord: attempt.targetWord,
+    predictedWord: attempt.predictedWord,
+    isCorrect: attempt.isCorrect,
+    timeSeconds: attempt.timeSeconds,
+    createdAt: attempt.createdAt,
+    date: attempt.date,
+    source: attempt.source,
+  };
+}
+
 app.locals.models = {
   normalizeAttempt,
+  createAttemptEventPayload,
 };
 app.locals.db = db;
 app.locals.collections = collections;
@@ -294,8 +324,22 @@ function configureWebSocketServer(server) {
   const socketServer = new WebSocketServer({ server, path: '/ws' });
 
   socketServer.on('connection', (socket, request) => {
+    socket.isAlive = true;
+
     // eslint-disable-next-line no-console
     console.log(`WebSocket connected from ${request.socket.remoteAddress || 'unknown-address'}`);
+
+    socket.send(
+      createSocketEvent(SOCKET_EVENT_TYPES.OPEN, {
+        connected: true,
+        path: '/ws',
+        connectedAt: new Date().toISOString(),
+      })
+    );
+
+    socket.on('pong', () => {
+      socket.isAlive = true;
+    });
 
     socket.on('close', () => {
       // eslint-disable-next-line no-console
@@ -306,6 +350,22 @@ function configureWebSocketServer(server) {
       // eslint-disable-next-line no-console
       console.error('WebSocket error', error);
     });
+  });
+
+  const heartbeatInterval = setInterval(() => {
+    socketServer.clients.forEach((client) => {
+      if (client.isAlive === false) {
+        client.terminate();
+        return;
+      }
+
+      client.isAlive = false;
+      client.ping();
+    });
+  }, 10000);
+
+  socketServer.on('close', () => {
+    clearInterval(heartbeatInterval);
   });
 
   return socketServer;
