@@ -101,3 +101,25 @@ The browser side was easiest once I used one shared WebSocket client at the app 
 For local dev, Vite needs to proxy both `/api` and `/ws` to `http://127.0.0.1:4000` or the frontend and backend do not behave like production.
 
 The ping/pong heartbeat is worth keeping because dead sockets otherwise stick around longer than you expect during testing.
+
+Final verification notes:
+
+- `npm run build` passes
+- `node --check service/index.js` passes
+- `service/package.json` includes `ws`
+- the live feed is now socket-driven instead of the old `setInterval` mock
+- both Play and Practice save through the same backend attempt flow that triggers broadcasts
+
+Local run reminder:
+
+1. Run `npm run service`
+2. Run `npm run dev`
+3. Open `http://localhost:5173`
+4. Log in from two browser windows
+5. Submit a Play or Practice attempt in one window and watch the live feed update in the other
+
+Production deploy reminder:
+
+1. Run `./deployService.sh -k 260startupkey.pem -h startup.inkspace.click -s startup`
+2. Open `https://startup.inkspace.click/`
+3. Verify the app loads, login still works, and the live feed connects over `wss`
