@@ -146,8 +146,9 @@ export function Practice({ currentUser }) {
       try {
         setIsSubmitting(true);
         setDefinitionError('');
+        const targetWord = activeWord.trim();
         const outcome = await scoringService.evaluateTypedAttempt({
-          targetWord: activeWord.trim(),
+          targetWord,
           typedWord,
           durationMs: Math.round(elapsedTime * 1000),
           strokePayload: strokeData,
@@ -156,9 +157,17 @@ export function Practice({ currentUser }) {
           return;
         }
 
-        setResult(outcome);
+        const savedOutcome = {
+          ...outcome,
+          player: currentUser.username,
+          word: targetWord,
+          targetWord,
+          source: 'practice',
+        };
+
+        setResult(savedOutcome);
         try {
-          await leaderboardService.addAttempt(outcome);
+          await leaderboardService.addAttempt(savedOutcome);
         } catch (error) {
           if (!cancelled) {
             setDefinitionError(error.message || 'Failed to save attempt');
