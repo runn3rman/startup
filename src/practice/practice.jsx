@@ -290,7 +290,6 @@ export function Practice({ currentUser }) {
             </select>
             {isWordsLoading ? <p>Loading words...</p> : null}
             {wordsError ? <p>{wordsError}</p> : null}
-            <p>Phase: {roundPhase}</p>
             <p>
               Active word: {activeWord || 'none'} {words.length > 0 ? `( ${wordIndex + 1}/${words.length} )` : ''}
             </p>
@@ -335,19 +334,8 @@ export function Practice({ currentUser }) {
             <button type="button" onClick={handleGetDefinition} disabled={!activeWord || isDefinitionLoading}>
               {isDefinitionLoading ? 'Loading definition...' : 'Get definition'}
             </button>
-            <p>{definition || 'No definition loaded.'}</p>
+            <p>{definition || 'Select a word and load its definition.'}</p>
             {definitionError ? <p>{definitionError}</p> : null}
-          </section>
-
-          <section>
-            <h3>3rd-Party Services (Placeholder)</h3>
-            <ul>
-              <li>Random word API</li>
-              <li>Dictionary/definition API</li>
-              <li>Optional sponsorship/ad provider later</li>
-            </ul>
-            <p>Flow: request a random word, pull a definition for that word, then render both in the practice UI.</p>
-            <img src="/images/word-card.svg" alt="Example word prompt card labeled VELOCITY" />
           </section>
         </div>
 
